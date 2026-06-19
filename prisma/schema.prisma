@@ -1,0 +1,131 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+model Usuario {
+  id                   String    @id @default(uuid()) @db.Uuid
+  nombre_completo      String    @db.VarChar(150)
+  telefono             String    @unique @db.VarChar(20)
+  correo_electronico   String?   @db.VarChar(255)
+  foto_ine_url         String?
+  foto_vivo_url        String?
+  estado_verificacion  String    @default("pendiente") @db.VarChar(20)
+  rol                  String    @default("ambos") @db.VarChar(20)
+  ubicacion_lat        Float?
+  ubicacion_lng        Float?
+  puntuacion_promedio  Float     @default(0)
+  total_calificaciones Int       @default(0)
+  creado_en            DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en       DateTime  @updatedAt @db.Timestamptz(6)
+
+  mandados_solicitados Mandado[]       @relation("MandadoSolicitante")
+  ofertas              Oferta[]        @relation("OfertaMandadero")
+  calificaciones_dadas Calificacion[]  @relation("CalificacionCalificador")
+  calificaciones_recibidas Calificacion[] @relation("CalificacionCalificado")
+  refresh_tokens       RefreshToken[]
+  mensajes_enviados    Mensaje[]
+
+  @@map("usuarios")
+}
+
+model RefreshToken {
+  id              String   @id @default(uuid()) @db.Uuid
+  token_hash      String   @db.VarChar(255)
+  token_sha256    String   @unique @db.VarChar(64)
+  id_usuario      String   @db.Uuid
+  usuario         Usuario  @relation(fields: [id_usuario], references: [id], onDelete: Cascade)
+  expira_en       DateTime @db.Timestamptz(6)
+  creado_en       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("refresh_tokens")
+}
+
+model Mandado {
+  id                      String    @id @default(uuid()) @db.Uuid
+  id_solicitante          String    @db.Uuid
+  solicitante             Usuario   @relation("MandadoSolicitante", fields: [id_solicitante], references: [id])
+  titulo                  String    @db.VarChar(100)
+  descripcion             String    @db.Text
+  tipo                    String    @db.VarChar(20)
+  foto_url                String?
+  ubicacion_recogida_lat  Float
+  ubicacion_recogida_lng  Float
+  ubicacion_entrega_lat   Float
+  ubicacion_entrega_lng   Float
+  direccion_recogida      String    @db.Text
+  direccion_entrega       String    @db.Text
+  fecha_hora_limite       DateTime  @db.Timestamptz(6)
+  estado                  String    @default("publicado") @db.VarChar(20)
+  creado_en               DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en          DateTime  @updatedAt @db.Timestamptz(6)
+
+  ofertas        Oferta[]        @relation("OfertaMandado")
+  calificaciones Calificacion[]
+  mensajes       Mensaje[]
+
+  @@map("mandados")
+}
+
+model Oferta {
+  id             String   @id @default(uuid()) @db.Uuid
+  id_mandado     String   @db.Uuid
+  mandado        Mandado  @relation("OfertaMandado", fields: [id_mandado], references: [id])
+  id_mandadero   String   @db.Uuid
+  mandadero      Usuario  @relation("OfertaMandadero", fields: [id_mandadero], references: [id])
+  monto_ofertado Decimal  @db.Decimal(10, 2)
+  estado         String   @default("pendiente") @db.VarChar(20)
+  creado_en      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([id_mandado, id_mandadero])
+  @@map("ofertas")
+}
+
+model Calificacion {
+  id             String   @id @default(uuid()) @db.Uuid
+  id_mandado     String   @db.Uuid
+  mandado        Mandado  @relation(fields: [id_mandado], references: [id])
+  id_calificador String   @db.Uuid
+  calificador    Usuario  @relation("CalificacionCalificador", fields: [id_calificador], references: [id])
+  id_calificado  String   @db.Uuid
+  calificado     Usuario  @relation("CalificacionCalificado", fields: [id_calificado], references: [id])
+  puntuacion     Int
+  comentario     String?
+  creado_en      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([id_mandado, id_calificador])
+  @@map("calificaciones")
+}
+
+model OTPCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  telefono  String   @db.VarChar(20)
+  codigo    String   @db.VarChar(6)
+  intentos  Int      @default(0)
+  expira_en DateTime @db.Timestamptz(6)
+  creado_en DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([telefono])
+  @@index([telefono])
+  @@map("otp_codes")
+}
+
+model Mensaje {
+  id           String   @id @default(uuid()) @db.Uuid
+  id_mandado   String   @db.Uuid
+  mandado      Mandado  @relation(fields: [id_mandado], references: [id])
+  id_remitente String   @db.Uuid
+  remitente    Usuario  @relation(fields: [id_remitente], references: [id])
+  texto        String   @db.Text
+  leido        Boolean  @default(false)
+  creado_en    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([id_mandado, creado_en])
+  @@map("mensajes")
+}
