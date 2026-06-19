@@ -1,0 +1,464 @@
+openapi: 3.0.3
+info:
+  title: Mandadero API
+  description: API REST para la app Mandadero - conecta personas que necesitan mandados con otras dispuestas a realizarlos
+  version: 1.0.0
+  contact:
+    name: Mandadero Team
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Desarrollo local
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre_completo:
+          type: string
+        telefono:
+          type: string
+          pattern: '^\+[1-9]\d{1,14}$'
+        rol:
+          type: string
+          enum: [solicitante, mandadero, ambos]
+        estado_verificacion:
+          type: string
+          enum: [pendiente, aprobado, rechazado]
+
+    Mandado:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+        descripcion:
+          type: string
+        tipo:
+          type: string
+          enum: [compra, tramite]
+        estado:
+          type: string
+          enum: [publicado, en_progreso, completado, cancelado]
+
+    Oferta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        monto_ofertado:
+          type: number
+        estado:
+          type: string
+          enum: [pendiente, aceptada, rechazada, cancelada]
+
+    Calificacion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        puntuacion:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comentario:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        detalles:
+          type: array
+          items:
+            type: object
+
+tags:
+  - name: Autenticación
+    description: Registro, verificación OTP, JWT
+  - name: Mandados
+    description: CRUD de mandados con búsqueda geoespacial
+  - name: Ofertas
+    description: Gestión de ofertas y contacto
+  - name: Calificaciones
+    description: Sistema de reputación
+  - name: Webhooks
+    description: Webhooks externos (Twilio)
+
+paths:
+  /auth/register:
+    post:
+      tags: [Autenticación]
+      summary: Registrar nuevo usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre_completo, telefono]
+              properties:
+                nombre_completo:
+                  type: string
+                telefono:
+                  type: string
+                correo_electronico:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: Usuario creado, OTP enviado
+        '409':
+          description: Teléfono ya registrado
+        '422':
+          description: Datos inválidos
+
+  /auth/verify-otp:
+    post:
+      tags: [Autenticación]
+      summary: Verificar código OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [telefono, codigo]
+              properties:
+                telefono:
+                  type: string
+                codigo:
+                  type: string
+      responses:
+        '200':
+          description: Token JWT + refresh token
+        '401':
+          description: Código inválido o expirado
+
+  /auth/refresh:
+    post:
+      tags: [Autenticación]
+      summary: Renovar access token con refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Nuevos tokens
+        '401':
+          description: Refresh token inválido
+
+  /auth/logout:
+    post:
+      tags: [Autenticación]
+      summary: Cerrar sesión
+      security: [BearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Sesión cerrada
+
+  /auth/verify-identity:
+    post:
+      tags: [Autenticación]
+      summary: Subir INE y selfie para verificación
+      security: [BearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [foto_ine, foto_vivo]
+              properties:
+                foto_ine:
+                  type: string
+                  format: binary
+                foto_vivo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Documentos recibidos
+        '400':
+          description: Archivos inválidos
+
+  /auth/verification-status:
+    get:
+      tags: [Autenticación]
+      summary: Consultar estado de verificación
+      security: [BearerAuth: []]
+      responses:
+        '200':
+          description: Estado actual de verificación
+
+  /mandados:
+    get:
+      tags: [Mandados]
+      summary: Listar mandados cercanos
+      security: [BearerAuth: []]
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radio_km
+          in: query
+          schema:
+            type: number
+            default: 10
+        - name: tipo
+          in: query
+          schema:
+            type: string
+            enum: [compra, tramite]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Lista paginada de mandados
+
+    post:
+      tags: [Mandados]
+      summary: Crear nuevo mandado
+      security: [BearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Mandado'
+      responses:
+        '201':
+          description: Mandado creado
+        '422':
+          description: Datos inválidos
+
+  /mandados/{id}:
+    get:
+      tags: [Mandados]
+      summary: Obtener detalle de mandado
+      security: [BearerAuth: []]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalle completo
+        '404':
+          description: No encontrado
+
+  /mandados/{id}/estado:
+    patch:
+      tags: [Mandados]
+      summary: Cambiar estado de mandado
+      security: [BearerAuth: []]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estado]
+              properties:
+                estado:
+                  type: string
+                  enum: [completado, cancelado]
+      responses:
+        '200':
+          description: Estado actualizado
+        '403':
+          description: No autorizado
+
+  /mandados/{id}/ofertas:
+    post:
+      tags: [Ofertas]
+      summary: Enviar oferta para un mandado
+      security: [BearerAuth: []]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [monto_ofertado]
+              properties:
+                monto_ofertado:
+                  type: number
+      responses:
+        '201':
+          description: Oferta creada
+        '403':
+          description: Verificación requerida
+        '404':
+          description: Mandado no encontrado
+
+    get:
+      tags: [Ofertas]
+      summary: Listar ofertas de un mandado
+      security: [BearerAuth: []]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de ofertas
+        '403':
+          description: No eres el solicitante
+
+  /ofertas/{id}:
+    patch:
+      tags: [Ofertas]
+      summary: Aceptar o rechazar oferta
+      security: [BearerAuth: []]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accion]
+              properties:
+                accion:
+                  type: string
+                  enum: [aceptada, rechazada]
+      responses:
+        '200':
+          description: Oferta actualizada
+        '403':
+          description: No autorizado
+        '409':
+          description: Oferta ya no está pendiente
+
+  /calificaciones:
+    post:
+      tags: [Calificaciones]
+      summary: Calificar a la contraparte
+      security: [BearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_mandado, id_calificado, puntuacion]
+              properties:
+                id_mandado:
+                  type: string
+                  format: uuid
+                id_calificado:
+                  type: string
+                  format: uuid
+                puntuacion:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comentario:
+                  type: string
+                  maxLength: 500
+      responses:
+        '201':
+          description: Calificación creada
+        '400':
+          description: Mandado no completado
+        '403':
+          description: No participaste en este mandado
+        '409':
+          description: Ya calificaste esta transacción
+
+  /twilio:
+    post:
+      tags: [Webhooks]
+      summary: Webhook para recibir status de Twilio
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                MessageSid:
+                  type: string
+                MessageStatus:
+                  type: string
+                To:
+                  type: string
+                From:
+                  type: string
+      responses:
+        '200':
+          description: Recibido
