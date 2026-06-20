@@ -16,7 +16,7 @@ beforeAll(async () => {
   const verifySolicitante = await request(app)
     .post('/api/v1/auth/verify-otp')
     .send({ telefono: '+521111000001', codigo: '123456' });
-  solicitanteToken = verifySolicitante.body.access_token;
+  solicitanteToken = verifySolicitante.body.token;
 
   await request(app)
     .post('/api/v1/auth/register')
@@ -24,7 +24,7 @@ beforeAll(async () => {
   const verifyMandadero = await request(app)
     .post('/api/v1/auth/verify-otp')
     .send({ telefono: '+521111000002', codigo: '123456' });
-  mandaderoToken = verifyMandadero.body.access_token;
+  mandaderoToken = verifyMandadero.body.token;
 
   await request(app)
     .post('/api/v1/auth/register')
@@ -32,7 +32,7 @@ beforeAll(async () => {
   const verifyThird = await request(app)
     .post('/api/v1/auth/verify-otp')
     .send({ telefono: '+521111000003', codigo: '123456' });
-  thirdPartyToken = verifyThird.body.access_token;
+  thirdPartyToken = verifyThird.body.token;
 });
 
 beforeEach(async () => {
@@ -40,15 +40,11 @@ beforeEach(async () => {
     .post('/api/v1/mandados')
     .set('Authorization', `Bearer ${solicitanteToken}`)
     .send({
-      titulo: 'Test mensajería',
+      titulo: 'Test mensajeria',
       descripcion: 'Para probar chat',
       tipo: 'compra',
-      ubicacion_recogida_lat: 20.588,
-      ubicacion_recogida_lng: -100.389,
-      direccion_recogida: 'Av. Principal 123',
-      ubicacion_entrega_lat: 20.590,
-      ubicacion_entrega_lng: -100.392,
-      direccion_entrega: 'Calle Secundaria 456',
+      ubicacion_recogida: { lat: 20.588, lng: -100.389, direccion: 'Av. Principal 123' },
+      ubicacion_entrega: { lat: 20.590, lng: -100.392, direccion: 'Calle Secundaria 456' },
       fecha_hora_limite: new Date(Date.now() + 86400000).toISOString(),
     });
   mandadoId = mandado.body.id;
@@ -86,7 +82,7 @@ describe('Mensajería Interna - GET /api/v1/mandados/:id/mensajes', () => {
     await request(app)
       .patch(`/api/v1/ofertas/${ofertaId}`)
       .set('Authorization', `Bearer ${solicitanteToken}`)
-      .send({ estado: 'aceptada' });
+      .send({ accion: 'aceptada' });
 
     const res = await request(app)
       .get(`/api/v1/mandados/${mandadoId}/mensajes`)
@@ -101,7 +97,7 @@ describe('Mensajería Interna - POST /api/v1/mandados/:id/mensajes', () => {
     await request(app)
       .patch(`/api/v1/ofertas/${ofertaId}`)
       .set('Authorization', `Bearer ${solicitanteToken}`)
-      .send({ estado: 'aceptada' });
+      .send({ accion: 'aceptada' });
 
     const res = await request(app)
       .post(`/api/v1/mandados/${mandadoId}/mensajes`)
@@ -114,7 +110,7 @@ describe('Mensajería Interna - POST /api/v1/mandados/:id/mensajes', () => {
     await request(app)
       .patch(`/api/v1/ofertas/${ofertaId}`)
       .set('Authorization', `Bearer ${solicitanteToken}`)
-      .send({ estado: 'aceptada' });
+      .send({ accion: 'aceptada' });
 
     const res = await request(app)
       .post(`/api/v1/mandados/${mandadoId}/mensajes`)
@@ -127,7 +123,7 @@ describe('Mensajería Interna - POST /api/v1/mandados/:id/mensajes', () => {
     await request(app)
       .patch(`/api/v1/ofertas/${ofertaId}`)
       .set('Authorization', `Bearer ${solicitanteToken}`)
-      .send({ estado: 'aceptada' });
+      .send({ accion: 'aceptada' });
 
     const res = await request(app)
       .post(`/api/v1/mandados/${mandadoId}/mensajes`)
@@ -141,7 +137,7 @@ describe('Mensajería Interna - POST /api/v1/mandados/:id/mensajes', () => {
     await request(app)
       .patch(`/api/v1/ofertas/${ofertaId}`)
       .set('Authorization', `Bearer ${solicitanteToken}`)
-      .send({ estado: 'aceptada' });
+      .send({ accion: 'aceptada' });
 
     const res = await request(app)
       .post(`/api/v1/mandados/${mandadoId}/mensajes`)
@@ -154,7 +150,7 @@ describe('Mensajería Interna - POST /api/v1/mandados/:id/mensajes', () => {
     await request(app)
       .patch(`/api/v1/ofertas/${ofertaId}`)
       .set('Authorization', `Bearer ${solicitanteToken}`)
-      .send({ estado: 'aceptada' });
+      .send({ accion: 'aceptada' });
 
     await request(app)
       .patch(`/api/v1/mandados/${mandadoId}/estado`)

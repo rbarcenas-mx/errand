@@ -15,6 +15,12 @@ jest.mock('../../src/config/database', () => ({
       findMany: jest.fn(),
       delete: jest.fn(),
     },
+    oTPCode: {
+      upsert: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
   },
 }));
 
@@ -84,6 +90,12 @@ describe('Auth API', () => {
         telefono: '+524421234567',
         rol: 'ambos',
         estado_verificacion: 'pendiente',
+      });
+      prisma.oTPCode.findUnique.mockResolvedValue({
+        telefono: '+524421234567',
+        codigo: '123456',
+        intentos: 0,
+        expira_en: new Date(Date.now() + 60000),
       });
       prisma.refreshToken.create.mockResolvedValue({ id: 'rt-1' });
 
