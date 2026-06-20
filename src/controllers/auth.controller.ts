@@ -12,6 +12,7 @@ import {
   findAndValidateRefreshToken,
 } from '../services/token.service';
 import { logger } from '../utils/logger';
+import { env } from '../config/env';
 
 import { Request, Response } from 'express';
 
@@ -47,7 +48,16 @@ export class AuthController {
 
       const existing = await userRepository.findByTelefono(data.telefono);
       if (existing) {
-        res.status(409).json({ error: 'Teléfono ya registrado' });
+        if (env.ALLOW_TEST_OTP && existing.estado_verificacion !== 'aprobado') {
+          const codigo = otpService.generateCode();
+          otpService.setOtp(data.telefono, codigo);
+          res.status(200).json({
+            mensaje: 'Codigo OTP reenviado via SMS',
+            telefono: data.telefono,
+          });
+          return;
+        }
+        res.status(409).json({ error: 'Telefono ya registrado' });
         return;
       }
 
@@ -80,7 +90,7 @@ export class AuthController {
     try {
       const data = verifyOtpSchema.parse(req.body);
 
-      const isValid = otpService.verifyOtp(data.telefono, data.codigo);
+      const isValid = await otpService.verifyOtp(data.telefono, data.codigo);
       if (!isValid) {
         res.status(401).json({ error: 'Código inválido o expirado' });
         return;
