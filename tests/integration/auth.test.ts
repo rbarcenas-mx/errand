@@ -94,7 +94,7 @@ describe('Auth API', () => {
       });
       prisma.oTPCode.findUnique.mockResolvedValue({
         telefono: '+524421234567',
-        codigo: '123456',
+        codigo: '6c0965840a74ac3252ec00f01a6813e8e1a046e7b742cd2f63dadaeeea07f67e',
         intentos: 0,
         expira_en: new Date(Date.now() + 60000),
       });
