@@ -14,6 +14,7 @@ jest.mock('../../src/config/database', () => ({
       count: jest.fn(),
     },
     $queryRawUnsafe: jest.fn(),
+    $queryRaw: jest.fn(),
   },
 }));
 
@@ -102,7 +103,7 @@ describe('Mandado API', () => {
   describe('GET /api/v1/mandados', () => {
     it('should list mandados with spatial filtering', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.$queryRawUnsafe.mockResolvedValue([
+      prisma.$queryRaw.mockResolvedValue([
         {
           id: 'mandado-1',
           titulo: 'Comprar tortillas',
@@ -112,9 +113,9 @@ describe('Mandado API', () => {
           ubicacion_entrega_lat: 20.59,
           ubicacion_entrega_lng: -100.392,
           distancia_km: 2.3,
-          fecha_hora_limite: '2027-06-20T18:00:00Z',
+          fecha_hora_limite: new Date('2027-06-20T18:00:00Z'),
           total_ofertas: 3,
-          creado_en: new Date().toISOString(),
+          creado_en: new Date(),
         },
       ]);
       prisma.mandado.count.mockResolvedValue(1);

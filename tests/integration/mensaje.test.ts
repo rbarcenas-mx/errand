@@ -1,7 +1,13 @@
 import request from 'supertest';
 import { createApp } from '../../src/app';
+import { prisma } from '../../src/config/database';
+import { generateTestToken } from '../setup';
 
 const app = createApp();
+
+const SOLICITANTE_ID = '00000000-0000-0000-0000-000000000001';
+const MANDADERO_ID = '00000000-0000-0000-0000-000000000002';
+const THIRD_ID = '00000000-0000-0000-0000-000000000003';
 
 let solicitanteToken: string;
 let mandaderoToken: string;
@@ -10,29 +16,43 @@ let mandadoId: string;
 let ofertaId: string;
 
 beforeAll(async () => {
-  await request(app)
-    .post('/api/v1/auth/register')
-    .send({ nombre_completo: 'Solicitante Chat', telefono: '+521111000001', correo_electronico: 'chat1@test.com' });
-  const verifySolicitante = await request(app)
-    .post('/api/v1/auth/verify-otp')
-    .send({ telefono: '+521111000001', codigo: '123456' });
-  solicitanteToken = verifySolicitante.body.token;
+  await prisma.usuario.upsert({
+    where: { telefono: '+521111000001' },
+    update: { id: SOLICITANTE_ID, estado_verificacion: 'aprobado' },
+    create: {
+      id: SOLICITANTE_ID,
+      nombre_completo: 'Solicitante Chat',
+      telefono: '+521111000001',
+      correo_electronico: 'chat1@test.com',
+      estado_verificacion: 'aprobado',
+    },
+  });
+  await prisma.usuario.upsert({
+    where: { telefono: '+521111000002' },
+    update: { id: MANDADERO_ID, estado_verificacion: 'aprobado' },
+    create: {
+      id: MANDADERO_ID,
+      nombre_completo: 'Mandadero Chat',
+      telefono: '+521111000002',
+      correo_electronico: 'chat2@test.com',
+      estado_verificacion: 'aprobado',
+    },
+  });
+  await prisma.usuario.upsert({
+    where: { telefono: '+521111000003' },
+    update: { id: THIRD_ID, estado_verificacion: 'aprobado' },
+    create: {
+      id: THIRD_ID,
+      nombre_completo: 'Third Party',
+      telefono: '+521111000003',
+      correo_electronico: 'chat3@test.com',
+      estado_verificacion: 'aprobado',
+    },
+  });
 
-  await request(app)
-    .post('/api/v1/auth/register')
-    .send({ nombre_completo: 'Mandadero Chat', telefono: '+521111000002', correo_electronico: 'chat2@test.com' });
-  const verifyMandadero = await request(app)
-    .post('/api/v1/auth/verify-otp')
-    .send({ telefono: '+521111000002', codigo: '123456' });
-  mandaderoToken = verifyMandadero.body.token;
-
-  await request(app)
-    .post('/api/v1/auth/register')
-    .send({ nombre_completo: 'Third Party', telefono: '+521111000003', correo_electronico: 'chat3@test.com' });
-  const verifyThird = await request(app)
-    .post('/api/v1/auth/verify-otp')
-    .send({ telefono: '+521111000003', codigo: '123456' });
-  thirdPartyToken = verifyThird.body.token;
+  solicitanteToken = generateTestToken(SOLICITANTE_ID, 'aprobado');
+  mandaderoToken = generateTestToken(MANDADERO_ID, 'aprobado');
+  thirdPartyToken = generateTestToken(THIRD_ID, 'aprobado');
 });
 
 beforeEach(async () => {
@@ -56,8 +76,14 @@ beforeEach(async () => {
   ofertaId = oferta.body.id;
 });
 
+afterEach(async () => {
+  await prisma.mensaje.deleteMany({ where: { id_mandado: mandadoId } });
+  await prisma.oferta.deleteMany({ where: { id_mandado: mandadoId } });
+  await prisma.mandado.deleteMany({ where: { id_solicitante: SOLICITANTE_ID } });
+});
+
 describe('Mensajería Interna - GET /api/v1/mandados/:id/mensajes', () => {
-  it('debe devolver 403 si no hay oferta aceptada', async () => {
+  it('debe devolver lista vacia si no hay oferta aceptada (solicitante)', async () => {
     const res = await request(app)
       .get(`/api/v1/mandados/${mandadoId}/mensajes`)
       .set('Authorization', `Bearer ${solicitanteToken}`);

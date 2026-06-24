@@ -156,7 +156,7 @@ describe('Offer Flow API', () => {
   });
 
   describe('PATCH /api/v1/ofertas/:id', () => {
-    it('should accept an offer and reveal contact', async () => {
+    it('should accept an offer and reveal both contacts', async () => {
       const { prisma } = require('../../src/config/database');
       let findUniqueCallCount = 0;
       prisma.oferta.findUnique.mockImplementation(() => {
@@ -168,6 +168,11 @@ describe('Offer Flow API', () => {
           mandado: {
             id_solicitante: 'user-solicitante',
             titulo: 'Comprar tortillas',
+            solicitante: {
+              id: 'user-solicitante',
+              nombre_completo: 'Juan Solicitante',
+              telefono: '+525551111111',
+            },
           },
           mandadero: {
             id: 'user-mandadero',
@@ -197,6 +202,9 @@ describe('Offer Flow API', () => {
       expect(res.status).toBe(200);
       expect(res.body.contacto_mandadero).toBeDefined();
       expect(res.body.contacto_mandadero.telefono).toBeDefined();
+      expect(res.body.contacto_solicitante).toBeDefined();
+      expect(res.body.contacto_solicitante.telefono).toBeDefined();
+      expect(res.body.contacto_solicitante.nombre_completo).toBe('Juan Solicitante');
     });
 
     it('should reject an offer', async () => {

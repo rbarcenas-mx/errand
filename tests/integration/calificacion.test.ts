@@ -105,6 +105,33 @@ describe('Calificacion API', () => {
       expect(res.status).toBe(400);
     });
 
+    it('should reject rating someone who is not the counterparty', async () => {
+      const { prisma } = require('../../src/config/database');
+      prisma.mandado.findUnique.mockResolvedValue({
+        id: UUID_MANDADO,
+        id_solicitante: UUID_SOLICITANTE,
+        estado: 'completado',
+        ofertas: [
+          {
+            id_mandadero: UUID_MANDADERO,
+            estado: 'aceptada',
+          },
+        ],
+      });
+
+      const res = await request(app)
+        .post('/api/v1/calificaciones')
+        .set('Authorization', `Bearer ${tokenSolicitante}`)
+        .send({
+          id_mandado: UUID_MANDADO,
+          id_calificado: '550e8400-e29b-41d4-a716-446655449999',
+          puntuacion: 5,
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain('contraparte');
+    });
+
     it('should reject non-participant rating', async () => {
       const { prisma } = require('../../src/config/database');
       prisma.mandado.findUnique.mockResolvedValue({

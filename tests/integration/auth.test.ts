@@ -70,6 +70,7 @@ describe('Auth API', () => {
       prisma.usuario.findUnique.mockResolvedValue({
         id: 'uuid-1',
         telefono: '+524421234567',
+        estado_verificacion: 'aprobado',
       });
 
       const res = await request(app).post('/api/v1/auth/register').send({
