@@ -23,5 +23,17 @@
     "@typescript-eslint/no-explicit-any": "warn",
     "no-console": "warn"
   },
+  "overrides": [
+    {
+      "files": ["tests/**/*.ts"],
+      "parserOptions": {
+        "project": "./tsconfig.test.json"
+      },
+      "rules": {
+        "@typescript-eslint/no-var-requires": "off",
+        "@typescript-eslint/ban-types": "off"
+      }
+    }
+  ],
   "ignorePatterns": ["dist/", "node_modules/", "prisma/seed.ts"]
 }
