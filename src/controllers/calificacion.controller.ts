@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/database';
 import { userService } from '../services/user.service';
 import { verificationService } from '../services/verification.service';
 import { logger } from '../utils/logger';
+import { mandadoRepository } from '../repositories/mandado.repository';
+import { calificacionRepository } from '../repositories/calificacion.repository';
 
 const createCalificacionSchema = z.object({
   id_mandado: z.string().uuid(),
@@ -35,10 +36,7 @@ export class CalificacionController {
         return;
       }
 
-      const mandado = await prisma.mandado.findUnique({
-        where: { id: data.id_mandado },
-        include: { ofertas: true },
-      });
+      const mandado = await mandadoRepository.findById(data.id_mandado);
 
       if (!mandado) {
         res.status(404).json({ error: 'Mandado no encontrado' });
@@ -53,37 +51,44 @@ export class CalificacionController {
       const userId = req.usuario!.sub;
 
       const isSolicitante = mandado.id_solicitante === userId;
-      const isMandaderoAceptado = mandado.ofertas.some(
-        (o) => o.id_mandadero === userId && o.estado === 'aceptada',
-      );
+      const ofertaAceptada = mandado.ofertas.find((o) => o.estado === 'aceptada');
+      const isMandaderoAceptado = ofertaAceptada?.id_mandadero === userId;
 
       if (!isSolicitante && !isMandaderoAceptado) {
         res.status(403).json({ error: 'No participaste en este mandado' });
         return;
       }
 
-      const existing = await prisma.calificacion.findUnique({
-        where: {
-          id_mandado_id_calificador: {
-            id_mandado: data.id_mandado,
-            id_calificador: req.usuario.sub,
-          },
-        },
-      });
+      if (!ofertaAceptada) {
+        res.status(400).json({ error: 'No hay una oferta aceptada en este mandado' });
+        return;
+      }
+
+      const contraparteEsperada = isSolicitante
+        ? ofertaAceptada.id_mandadero
+        : mandado.id_solicitante;
+
+      if (data.id_calificado !== contraparteEsperada) {
+        res.status(403).json({ error: 'Solo puedes calificar a la contraparte de este mandado' });
+        return;
+      }
+
+      const existing = await calificacionRepository.findDuplicada(
+        data.id_mandado,
+        req.usuario.sub,
+      );
 
       if (existing) {
         res.status(409).json({ error: 'Ya calificaste esta transacción' });
         return;
       }
 
-      const calificacion = await prisma.calificacion.create({
-        data: {
-          id_mandado: data.id_mandado,
-          id_calificador: req.usuario.sub,
-          id_calificado: data.id_calificado,
-          puntuacion: data.puntuacion,
-          comentario: data.comentario,
-        },
+      const calificacion = await calificacionRepository.create({
+        id_mandado: data.id_mandado,
+        id_calificador: req.usuario.sub,
+        id_calificado: data.id_calificado,
+        puntuacion: data.puntuacion,
+        comentario: data.comentario,
       });
 
       await userService.recalculateRating(data.id_calificado);

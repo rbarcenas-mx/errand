@@ -181,9 +181,8 @@ export class MandadoController {
           });
           return;
         }
-        const ofertaAceptada = mandado.ofertas.find((o) => o.estado === 'aceptada');
-        if (!ofertaAceptada || ofertaAceptada.id_mandadero !== req.usuario.sub) {
-          res.status(403).json({ error: 'Solo el mandadero asignado puede completar el mandado' });
+        if (mandado.id_solicitante !== req.usuario.sub) {
+          res.status(403).json({ error: 'Solo el solicitante puede completar el mandado' });
           return;
         }
       }

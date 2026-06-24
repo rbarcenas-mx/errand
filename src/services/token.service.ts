@@ -12,7 +12,7 @@ export function generateAccessToken(usuario: { id: string; telefono: string; est
       estado_verificacion: usuario.estado_verificacion,
     },
     env.JWT_SECRET,
-    { expiresIn: '1h' as any },
+    { expiresIn: '1h' } as jwt.SignOptions,
   );
 }
 
@@ -47,15 +47,32 @@ export async function revokeRefreshToken(refreshToken: string): Promise<boolean>
   return true;
 }
 
-export async function findAndValidateRefreshToken(
+export async function rotateRefreshToken(
   refreshToken: string,
-): Promise<{ id: string; usuario: { id: string; telefono: string; estado_verificacion: string } } | null> {
+): Promise<{ nuevoToken: string; usuario: { id: string; telefono: string; estado_verificacion: string } } | null> {
   const tokenSha256 = sha256(refreshToken);
   const record = await prisma.refreshToken.findUnique({
     where: { token_sha256: tokenSha256, expira_en: { gt: new Date() } },
     include: { usuario: true },
   });
   if (!record) return null;
-  await prisma.refreshToken.delete({ where: { id: record.id } });
-  return record;
+
+  const nuevoToken = generateRefreshToken();
+  const nuevoTokenHash = await bcrypt.hash(nuevoToken, 10);
+  const nuevoTokenSha256 = sha256(nuevoToken);
+  const expiraEn = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await prisma.$transaction([
+    prisma.refreshToken.delete({ where: { id: record.id } }),
+    prisma.refreshToken.create({
+      data: {
+        token_hash: nuevoTokenHash,
+        token_sha256: nuevoTokenSha256,
+        id_usuario: record.id_usuario,
+        expira_en: expiraEn,
+      },
+    }),
+  ]);
+
+  return { nuevoToken, usuario: record.usuario };
 }

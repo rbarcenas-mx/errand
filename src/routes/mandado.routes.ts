@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { mandadoController } from '../controllers/mandado.controller';
 import { ofertaController } from '../controllers/oferta.controller';
 import { authenticate } from '../middleware/auth.middleware';
+import { listMensajes, createMensaje } from '../controllers/mensaje.controller';
 
 export const mandadoRoutes = Router();
 
@@ -17,3 +18,5 @@ mandadoRoutes.post('/:id/ofertas', authenticate, (req, res) =>
 mandadoRoutes.get('/:id/ofertas', authenticate, (req, res) =>
   ofertaController.listByMandado(req, res),
 );
+mandadoRoutes.get('/:id/mensajes', authenticate, listMensajes);
+mandadoRoutes.post('/:id/mensajes', authenticate, createMensaje);

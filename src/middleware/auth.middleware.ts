@@ -25,6 +25,21 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
 }
 
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  if (!req.usuario) {
+    res.status(401).json({ error: 'Autenticación requerida' });
+    return;
+  }
+
+  const adminPhone = env.ADMIN_TELEFONO;
+  if (!adminPhone || req.usuario.telefono !== adminPhone) {
+    res.status(403).json({ error: 'Acceso de administrador requerido' });
+    return;
+  }
+
+  next();
+}
+
 export function requireVerified(req: Request, res: Response, next: NextFunction): void {
   if (!req.usuario) {
     res.status(401).json({ error: 'Autenticación requerida' });

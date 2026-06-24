@@ -1,23 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { mandadoRepository } from '../repositories/mandado.repository';
+import { mensajeRepository } from '../repositories/mensaje.repository';
 
 export async function listMensajes(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    const usuarioId = (req as any).usuario?.id;
+    const usuarioId = (req as Request & { usuario?: { sub: string } }).usuario?.sub;
     const antesDe = req.query.antes_de as string | undefined;
 
-    const mandado = await prisma.mandado.findUnique({
-      where: { id },
-      include: {
-        ofertas: {
-          where: { estado: 'aceptada' },
-          take: 1,
-        },
-      },
-    });
+    const mandado = await mandadoRepository.findByIdConOfertaAceptada(id);
 
     if (!mandado) {
       return res.status(404).json({ error: 'MANDADO_NO_ENCONTRADO', message: 'Mandado no encontrado' });
@@ -31,34 +22,11 @@ export async function listMensajes(req: Request, res: Response, next: NextFuncti
       return res.status(403).json({ error: 'NO_PARTICIPANTE', message: 'No eres participante de este mandado' });
     }
 
-    const where: any = { id_mandado: id };
-    if (antesDe) {
-      where.creado_en = { lt: new Date(antesDe) };
-    }
-
-    const mensajes = await prisma.mensaje.findMany({
-      where,
-      orderBy: { creado_en: 'desc' },
-      take: 50,
-      select: {
-        id: true,
-        id_remitente: true,
-        texto: true,
-        leido: true,
-        creado_en: true,
-      },
-    });
+    const mensajes = await mensajeRepository.findByMandado(id, { antesDe });
 
     const puedeEscribir = mandado.estado !== 'completado' && mandado.estado !== 'cancelado';
 
-    await prisma.mensaje.updateMany({
-      where: {
-        id_mandado: id,
-        id_remitente: { not: usuarioId },
-        leido: false,
-      },
-      data: { leido: true },
-    });
+    await mensajeRepository.marcarLeidos(id, usuarioId);
 
     res.json({ mensajes: mensajes.reverse(), can_escribir: puedeEscribir });
   } catch (error) {
@@ -69,7 +37,7 @@ export async function listMensajes(req: Request, res: Response, next: NextFuncti
 export async function createMensaje(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    const usuarioId = (req as any).usuario?.id;
+    const usuarioId = (req as Request & { usuario?: { sub: string } }).usuario?.sub;
     const { texto } = req.body;
 
     if (!texto || texto.trim().length === 0) {
@@ -79,15 +47,7 @@ export async function createMensaje(req: Request, res: Response, next: NextFunct
       return res.status(422).json({ error: 'TEXTO_EXCEDE_LIMITE', message: 'El texto excede 1000 caracteres' });
     }
 
-    const mandado = await prisma.mandado.findUnique({
-      where: { id },
-      include: {
-        ofertas: {
-          where: { estado: 'aceptada' },
-          take: 1,
-        },
-      },
-    });
+    const mandado = await mandadoRepository.findByIdConOfertaAceptada(id);
 
     if (!mandado) {
       return res.status(404).json({ error: 'MANDADO_NO_ENCONTRADO', message: 'Mandado no encontrado' });
@@ -108,13 +68,10 @@ export async function createMensaje(req: Request, res: Response, next: NextFunct
       return res.status(403).json({ error: 'NO_PARTICIPANTE', message: 'No eres participante de este mandado' });
     }
 
-    const mensaje = await prisma.mensaje.create({
-      data: {
-        id_mandado: id,
-        id_remitente: usuarioId,
-        texto: texto.trim(),
-      },
-      select: { id: true, creado_en: true },
+    const mensaje = await mensajeRepository.create({
+      id_mandado: id,
+      id_remitente: usuarioId,
+      texto: texto.trim(),
     });
 
     res.status(201).json(mensaje);

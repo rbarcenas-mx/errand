@@ -35,6 +35,26 @@ export class MandadoRepository {
     });
   }
 
+  async findByIdConOfertaAceptada(id: string) {
+    return prisma.mandado.findUnique({
+      where: { id },
+      include: {
+        solicitante: {
+          select: {
+            id: true,
+            nombre_completo: true,
+            puntuacion_promedio: true,
+            telefono: true,
+          },
+        },
+        ofertas: {
+          where: { estado: 'aceptada' },
+          take: 1,
+        },
+      },
+    });
+  }
+
   async findNearby(
     lat: number,
     lng: number,
@@ -52,8 +72,40 @@ export class MandadoRepository {
       ...(tipo && { tipo }),
     };
 
+    const tipoCondicion = tipo ? Prisma.sql`AND m.tipo = ${tipo}` : Prisma.empty;
+    const sql = Prisma.sql`
+      SELECT
+        m.id,
+        m.titulo,
+        m.tipo,
+        m.ubicacion_recogida_lat,
+        m.ubicacion_recogida_lng,
+        m.ubicacion_entrega_lat,
+        m.ubicacion_entrega_lng,
+        ST_Distance(
+          ST_SetSRID(ST_MakePoint(m.ubicacion_recogida_lng, m.ubicacion_recogida_lat), 4326)::geography,
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+        ) / 1000.0 AS distancia_km,
+        m.fecha_hora_limite,
+        CAST(COUNT(o.id) AS INTEGER) AS total_ofertas,
+        m.creado_en
+      FROM mandados m
+      LEFT JOIN ofertas o ON o.id_mandado = m.id
+      WHERE m.estado = ${estado}
+        AND m.fecha_hora_limite > NOW()
+        ${tipoCondicion}
+        AND ST_DWithin(
+          ST_SetSRID(ST_MakePoint(m.ubicacion_recogida_lng, m.ubicacion_recogida_lat), 4326)::geography,
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+          ${radioKm * 1000}
+        )
+      GROUP BY m.id
+      ORDER BY distancia_km ASC
+      LIMIT ${limit} OFFSET ${skip}
+    `;
+
     const [data, total] = await Promise.all([
-      prisma.$queryRawUnsafe<
+      prisma.$queryRaw<
         Array<{
           id: string;
           titulo: string;
@@ -67,40 +119,7 @@ export class MandadoRepository {
           total_ofertas: number;
           creado_en: Date;
         }>
-      >(
-        `SELECT
-          m.id,
-          m.titulo,
-          m.tipo,
-          m.ubicacion_recogida_lat,
-          m.ubicacion_recogida_lng,
-          m.ubicacion_entrega_lat,
-          m.ubicacion_entrega_lng,
-          ST_Distance(
-            m.ubicacion_recogida_lng::geometry,
-            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-          ) / 1000.0 AS distancia_km,
-          m.fecha_hora_limite,
-          CAST(COUNT(o.id) AS INTEGER) AS total_ofertas,
-          m.creado_en
-        FROM mandados m
-        LEFT JOIN ofertas o ON o.id_mandado = m.id
-        WHERE m.estado = $3
-          AND m.fecha_hora_limite > NOW()
-          ${tipo ? "AND m.tipo = $4" : ''}
-          AND ST_DWithin(
-            m.ubicacion_recogida_lng::geometry,
-            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-            ${radioKm} * 1000
-          )
-        GROUP BY m.id
-        ORDER BY distancia_km ASC
-        LIMIT ${limit} OFFSET ${skip}`,
-        lng,
-        lat,
-        estado,
-        ...(tipo ? [tipo] : []),
-      ),
+      >(sql),
       prisma.mandado.count({ where }),
     ]);
 

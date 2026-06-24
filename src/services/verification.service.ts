@@ -23,21 +23,60 @@ export class VerificationService {
   ): Promise<{ estado: string; mensaje: string }> {
     logger.info({ userId }, 'Iniciando verificación asíncrona de identidad');
 
-    const resultado = await this.analizarDocumentos(fotoIneUrl, fotoVivoUrl);
+    let resultado: { estado: string; mensaje: string };
+    try {
+      resultado = await this.analizarDocumentos(fotoIneUrl, fotoVivoUrl);
+    } catch (error) {
+      logger.error({ userId, error }, 'Error en servicio de verificación externo, degradando a verificación manual');
+      resultado = {
+        estado: 'pendiente_manual',
+        mensaje: 'No pudimos verificar tus documentos automáticamente. Un agente los revisará pronto.',
+      };
+    }
 
     await prisma.usuario.update({
       where: { id: userId },
-      data: { estado_verificacion: resultado.estado },
+      data: {
+        estado_verificacion: resultado.estado,
+        verificado_en: resultado.estado === 'aprobado' ? new Date() : undefined,
+      },
     });
 
-    await notificationService.notifyVerificacionCompleta(
-      userId,
-      resultado.estado,
-      resultado.mensaje,
-    );
+    if (resultado.estado !== 'pendiente_manual') {
+      await notificationService.notifyVerificacionCompleta(
+        userId,
+        resultado.estado,
+        resultado.mensaje,
+      );
+    }
 
     logger.info({ userId, estado: resultado.estado }, 'Verificación completada');
     return resultado;
+  }
+
+  async revisarVerificacion(
+    userId: string,
+    nuevoEstado: 'aprobado' | 'rechazado',
+    motivo?: string,
+  ): Promise<{ estado: string; mensaje: string }> {
+    logger.info({ userId, nuevoEstado }, 'Revisión manual de verificación');
+
+    await prisma.usuario.update({
+      where: { id: userId },
+      data: {
+        estado_verificacion: nuevoEstado,
+        verificado_en: nuevoEstado === 'aprobado' ? new Date() : undefined,
+      },
+    });
+
+    const mensaje = nuevoEstado === 'aprobado'
+      ? 'Tu verificación de identidad ha sido aprobada'
+      : `Tu verificación de identidad ha sido rechazada. ${motivo || 'Los documentos no cumplen con los requisitos.'}. Puedes intentar de nuevo subiendo nuevos documentos.`;
+
+    await notificationService.notifyVerificacionCompleta(userId, nuevoEstado, mensaje);
+
+    logger.info({ userId, nuevoEstado }, 'Revisión manual completada');
+    return { estado: nuevoEstado, mensaje };
   }
 
   private async analizarDocumentos(
@@ -48,7 +87,7 @@ export class VerificationService {
 
     if (verificacionManual) {
       return {
-        estado: 'pendiente',
+        estado: 'pendiente_manual',
         mensaje: 'Documentos recibidos, un agente revisará tu información pronto',
       };
     }

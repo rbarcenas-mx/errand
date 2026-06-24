@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/database';
 import { mandadoRepository } from '../repositories/mandado.repository';
+import { ofertaRepository } from '../repositories/oferta.repository';
 import { mandadoService } from '../services/mandado.service';
 import { notificationService } from '../services/notification.service';
 import { verificationService } from '../services/verification.service';
@@ -50,26 +50,20 @@ export class OfertaController {
         return;
       }
 
-      const existing = await prisma.oferta.findUnique({
-        where: {
-          id_mandado_id_mandadero: {
-            id_mandado: mandadoId,
-            id_mandadero: req.usuario.sub,
-          },
-        },
-      });
+      const existing = await ofertaRepository.findByMandadoAndMandadero(
+        mandadoId,
+        req.usuario.sub,
+      );
 
       if (existing) {
         res.status(400).json({ error: 'Ya ofertaste en este mandado' });
         return;
       }
 
-      const oferta = await prisma.oferta.create({
-        data: {
-          id_mandado: mandadoId,
-          id_mandadero: req.usuario.sub,
-          monto_ofertado: data.monto_ofertado,
-        },
+      const oferta = await ofertaRepository.create({
+        id_mandado: mandadoId,
+        id_mandadero: req.usuario.sub,
+        monto_ofertado: data.monto_ofertado,
       });
 
       try {
@@ -116,20 +110,7 @@ export class OfertaController {
         return;
       }
 
-      const ofertas = await prisma.oferta.findMany({
-        where: { id_mandado: mandadoId },
-        include: {
-          mandadero: {
-            select: {
-              id: true,
-              nombre_completo: true,
-              puntuacion_promedio: true,
-              total_calificaciones: true,
-            },
-          },
-        },
-        orderBy: { creado_en: 'desc' },
-      });
+      const ofertas = await ofertaRepository.listByMandadoWithMandadero(mandadoId);
 
       res.status(200).json({
         data: ofertas.map((o) => ({
@@ -156,10 +137,7 @@ export class OfertaController {
       const data = patchOfertaSchema.parse(req.body);
       const ofertaId = req.params.id;
 
-      const oferta = await prisma.oferta.findUnique({
-        where: { id: ofertaId },
-        include: { mandado: true, mandadero: true },
-      });
+      const oferta = await ofertaRepository.findById(ofertaId);
 
       if (!oferta) {
         res.status(404).json({ error: 'Oferta no encontrada' });
@@ -177,10 +155,7 @@ export class OfertaController {
       }
 
       if (data.accion === 'rechazada') {
-        const updated = await prisma.oferta.update({
-          where: { id: ofertaId },
-          data: { estado: 'rechazada' },
-        });
+        const updated = await ofertaRepository.updateEstado(ofertaId, 'rechazada');
 
         res.status(200).json({
           mensaje: 'Oferta rechazada',
@@ -190,7 +165,7 @@ export class OfertaController {
         return;
       }
 
-      const { contacto } = await mandadoService.acceptOferta(
+      const { contacto_mandadero, contacto_solicitante } = await mandadoService.acceptOferta(
         ofertaId,
         oferta.id_mandado,
       );
@@ -205,8 +180,9 @@ export class OfertaController {
       }
 
       res.status(200).json({
-        mensaje: 'Oferta aceptada. Contacto del mandadero revelado.',
-        contacto_mandadero: contacto,
+        mensaje: 'Oferta aceptada. Canal de mensajería abierto.',
+        contacto_mandadero,
+        contacto_solicitante,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {

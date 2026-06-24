@@ -3,8 +3,8 @@ import { logger } from '../utils/logger';
 
 export class MandadoService {
   async revealContactInfo(ofertaId: string): Promise<{
-    nombre_completo: string;
-    telefono: string;
+    mandadero: { nombre_completo: string; telefono: string };
+    solicitante: { nombre_completo: string; telefono: string };
   } | null> {
     try {
       const oferta = await prisma.oferta.findUnique({
@@ -17,14 +17,31 @@ export class MandadoService {
               telefono: true,
             },
           },
+          mandado: {
+            include: {
+              solicitante: {
+                select: {
+                  id: true,
+                  nombre_completo: true,
+                  telefono: true,
+                },
+              },
+            },
+          },
         },
       });
 
       if (!oferta || oferta.estado !== 'aceptada') return null;
 
       return {
-        nombre_completo: oferta.mandadero.nombre_completo,
-        telefono: oferta.mandadero.telefono,
+        mandadero: {
+          nombre_completo: oferta.mandadero.nombre_completo,
+          telefono: oferta.mandadero.telefono,
+        },
+        solicitante: {
+          nombre_completo: oferta.mandado.solicitante.nombre_completo,
+          telefono: oferta.mandado.solicitante.telefono,
+        },
       };
     } catch (error) {
       logger.error({ error }, 'Error al revelar información de contacto');
@@ -33,7 +50,8 @@ export class MandadoService {
   }
 
   async acceptOferta(ofertaId: string, mandadoId: string): Promise<{
-    contacto: { nombre_completo: string; telefono: string } | null;
+    contacto_mandadero: { nombre_completo: string; telefono: string } | null;
+    contacto_solicitante: { nombre_completo: string; telefono: string } | null;
   }> {
     await prisma.$transaction(async (tx) => {
       await tx.oferta.update({
@@ -57,7 +75,10 @@ export class MandadoService {
     });
 
     const contacto = await this.revealContactInfo(ofertaId);
-    return { contacto };
+    return {
+      contacto_mandadero: contacto ? contacto.mandadero : null,
+      contacto_solicitante: contacto ? contacto.solicitante : null,
+    };
   }
 }
 

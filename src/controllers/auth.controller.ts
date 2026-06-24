@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { prisma } from '../config/database';
 import { userRepository } from '../repositories/user.repository';
 import { notificationService } from '../services/notification.service';
 import { storageService } from '../services/storage.service';
@@ -9,7 +10,7 @@ import {
   generateRefreshToken,
   storeRefreshToken,
   revokeRefreshToken,
-  findAndValidateRefreshToken,
+  rotateRefreshToken,
 } from '../services/token.service';
 import { logger } from '../utils/logger';
 import { env } from '../config/env';
@@ -135,24 +136,22 @@ export class AuthController {
     try {
       const data = refreshSchema.parse(req.body);
 
-      const tokenRecord = await findAndValidateRefreshToken(data.refresh_token);
+      const tokenRecord = await rotateRefreshToken(data.refresh_token);
       if (!tokenRecord) {
         res.status(401).json({ error: 'Refresh token inválido, expirado o revocado' });
         return;
       }
 
       const usuario = tokenRecord.usuario;
-      const { accessToken, refreshToken } = generateTokens({
+      const accessToken = generateAccessToken({
         id: usuario.id,
         telefono: usuario.telefono,
         estado_verificacion: usuario.estado_verificacion,
       });
 
-      await storeRefreshToken(usuario.id, refreshToken);
-
       res.status(200).json({
         token: accessToken,
-        refresh_token: refreshToken,
+        refresh_token: tokenRecord.nuevoToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -181,6 +180,38 @@ export class AuthController {
         return;
       }
       logger.error({ error }, 'Error en logout');
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  }
+
+  async deleteAccount(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.usuario) {
+        res.status(401).json({ error: 'Autenticación requerida' });
+        return;
+      }
+
+      const userId = req.usuario.sub;
+
+      await prisma.$transaction([
+        prisma.refreshToken.deleteMany({ where: { id_usuario: userId } }),
+        prisma.mensaje.deleteMany({ where: { id_remitente: userId } }),
+        prisma.calificacion.deleteMany({
+          where: { OR: [{ id_calificador: userId }, { id_calificado: userId }] },
+        }),
+        prisma.oferta.deleteMany({ where: { id_mandadero: userId } }),
+        prisma.$executeRawUnsafe('DELETE FROM denuncias WHERE id_denunciante = $1 OR id_denunciado = $1', userId),
+        prisma.mandado.updateMany({
+          where: { id_solicitante: userId },
+          data: { id_solicitante: '00000000-0000-0000-0000-000000000000' },
+        }),
+        prisma.usuario.delete({ where: { id: userId } }),
+      ]);
+
+      logger.info({ userId }, 'Cuenta eliminada correctamente');
+      res.status(200).json({ mensaje: 'Cuenta eliminada correctamente' });
+    } catch (error) {
+      logger.error({ error }, 'Error al eliminar cuenta');
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   }
