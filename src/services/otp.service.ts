@@ -2,6 +2,13 @@ import { prisma } from '../config/database';
 import { env } from '../config/env';
 import crypto from 'crypto';
 
+function hashOtp(telefono: string, codigo: string): string {
+  return crypto
+    .createHash('sha256')
+    .update(`${telefono}:${codigo}`)
+    .digest('hex');
+}
+
 class OtpService {
   generateCode(): string {
     if (env.ALLOW_TEST_OTP) {
@@ -11,16 +18,17 @@ class OtpService {
   }
 
   async setOtp(telefono: string, codigo: string, ttlMinutes = 10): Promise<void> {
+    const codigoHash = hashOtp(telefono, codigo);
     await prisma.oTPCode.upsert({
       where: { telefono },
       update: {
-        codigo,
+        codigo: codigoHash,
         intentos: 0,
         expira_en: new Date(Date.now() + ttlMinutes * 60 * 1000),
       },
       create: {
         telefono,
-        codigo,
+        codigo: codigoHash,
         expira_en: new Date(Date.now() + ttlMinutes * 60 * 1000),
       },
     });
@@ -45,7 +53,8 @@ class OtpService {
       data: { intentos: entry.intentos + 1 },
     });
 
-    if (entry.codigo !== codigo) return false;
+    const codigoHash = hashOtp(telefono, codigo);
+    if (entry.codigo !== codigoHash) return false;
 
     await prisma.oTPCode.delete({ where: { telefono } });
     return true;

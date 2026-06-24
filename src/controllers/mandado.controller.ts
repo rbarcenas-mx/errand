@@ -128,11 +128,13 @@ export class MandadoController {
 
       res.status(200).json({
         id: mandado.id,
-        solicitante: {
-          id: mandado.solicitante.id,
-          nombre_completo: mandado.solicitante.nombre_completo,
-          puntuacion_promedio: mandado.solicitante.puntuacion_promedio,
-        },
+        solicitante: mandado.solicitante
+          ? {
+              id: mandado.solicitante.id,
+              nombre_completo: mandado.solicitante.nombre_completo,
+              puntuacion_promedio: mandado.solicitante.puntuacion_promedio,
+            }
+          : null,
         titulo: mandado.titulo,
         descripcion: mandado.descripcion,
         tipo: mandado.tipo,

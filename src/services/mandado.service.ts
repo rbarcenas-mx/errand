@@ -33,6 +33,10 @@ export class MandadoService {
 
       if (!oferta || oferta.estado !== 'aceptada') return null;
 
+      if (!oferta.mandado.solicitante) {
+        throw new Error('Solicitante no disponible (cuenta eliminada)');
+      }
+
       return {
         mandadero: {
           nombre_completo: oferta.mandadero.nombre_completo,

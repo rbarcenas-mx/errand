@@ -12,8 +12,12 @@ const createOfertaSchema = z.object({
 });
 
 const patchOfertaSchema = z.object({
-  accion: z.enum(['aceptada', 'rechazada']),
-});
+  accion: z.enum(['aceptada', 'rechazada']).optional(),
+  estado: z.enum(['aceptada', 'rechazada']).optional(),
+}).refine(
+  (data) => data.accion || data.estado,
+  { message: 'Debe proporcionar "accion" o "estado"' },
+);
 
 export class OfertaController {
   async create(req: Request, res: Response): Promise<void> {
@@ -67,10 +71,12 @@ export class OfertaController {
       });
 
       try {
-        await notificationService.notifyNuevaOferta(
-          mandado.solicitante.telefono,
-          mandado.titulo,
-        );
+        if (mandado.solicitante) {
+          await notificationService.notifyNuevaOferta(
+            mandado.solicitante.telefono,
+            mandado.titulo,
+          );
+        }
       } catch {
         logger.warn('No se pudo enviar notificación de nueva oferta');
       }
@@ -154,7 +160,9 @@ export class OfertaController {
         return;
       }
 
-      if (data.accion === 'rechazada') {
+      const accion = data.accion || data.estado;
+
+      if (accion === 'rechazada') {
         const updated = await ofertaRepository.updateEstado(ofertaId, 'rechazada');
 
         res.status(200).json({

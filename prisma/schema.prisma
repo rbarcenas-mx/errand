@@ -52,8 +52,8 @@ model RefreshToken {
 
 model Mandado {
   id                     String   @id @default(uuid()) @db.Uuid
-  id_solicitante         String   @db.Uuid
-  solicitante            Usuario  @relation("MandadoSolicitante", fields: [id_solicitante], references: [id])
+  id_solicitante         String?  @db.Uuid
+  solicitante            Usuario? @relation("MandadoSolicitante", fields: [id_solicitante], references: [id], onDelete: SetNull)
   titulo                 String   @db.VarChar(100)
   descripcion            String   @db.Text
   tipo                   String   @db.VarChar(20)
@@ -110,7 +110,7 @@ model Calificacion {
 model OTPCode {
   id        String   @id @default(uuid()) @db.Uuid
   telefono  String   @db.VarChar(20)
-  codigo    String   @db.VarChar(6)
+  codigo    String   @db.VarChar(64)
   intentos  Int      @default(0)
   expira_en DateTime @db.Timestamptz(6)
   creado_en DateTime @default(now()) @db.Timestamptz(6)

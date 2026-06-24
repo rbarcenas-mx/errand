@@ -37,7 +37,7 @@ CREATE TABLE "refresh_tokens" (
 -- CreateTable
 CREATE TABLE "mandados" (
     "id" UUID NOT NULL,
-    "id_solicitante" UUID NOT NULL,
+    "id_solicitante" UUID,
     "titulo" VARCHAR(100) NOT NULL,
     "descripcion" TEXT NOT NULL,
     "tipo" VARCHAR(20) NOT NULL,
@@ -85,7 +85,7 @@ CREATE TABLE "calificaciones" (
 CREATE TABLE "otp_codes" (
     "id" UUID NOT NULL,
     "telefono" VARCHAR(20) NOT NULL,
-    "codigo" VARCHAR(6) NOT NULL,
+    "codigo" VARCHAR(64) NOT NULL,
     "intentos" INTEGER NOT NULL DEFAULT 0,
     "expira_en" TIMESTAMPTZ(6) NOT NULL,
     "creado_en" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -144,7 +144,7 @@ CREATE INDEX "mensajes_id_mandado_creado_en_idx" ON "mensajes"("id_mandado", "cr
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_id_usuario_fkey" FOREIGN KEY ("id_usuario") REFERENCES "usuarios"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "mandados" ADD CONSTRAINT "mandados_id_solicitante_fkey" FOREIGN KEY ("id_solicitante") REFERENCES "usuarios"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "mandados" ADD CONSTRAINT "mandados_id_solicitante_fkey" FOREIGN KEY ("id_solicitante") REFERENCES "usuarios"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ofertas" ADD CONSTRAINT "ofertas_id_mandado_fkey" FOREIGN KEY ("id_mandado") REFERENCES "mandados"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

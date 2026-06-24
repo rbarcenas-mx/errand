@@ -31,8 +31,12 @@ CLOUDINARY_API_KEY=tu_key
 CLOUDINARY_API_SECRET=tu_secret
 JWT_SECRET=clave_secreta_para_jwt
 PORT=3000
-ALLOW_TEST_OTP=true
+ALLOW_TEST_OTP=true  # SOLO DESARROLLO - nunca usar en produccion
 ```
+
+> **ADVERTENCIA**: `ALLOW_TEST_OTP=true` permite usar el codigo fijo `123456` para cualquier telefono.
+> En produccion, la aplicacion falla al iniciar si esta variable esta activa.
+> Usar `ALLOW_TEST_OTP=false` en `.env.production`.
 
 ```bash
 # Ejecutar migraciones de base de datos

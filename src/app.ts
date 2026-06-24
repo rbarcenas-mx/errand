@@ -9,6 +9,7 @@ import { mandadoRoutes } from './routes/mandado.routes';
 import { ofertaRoutes } from './routes/oferta.routes';
 import { calificacionRoutes } from './routes/calificacion.routes';
 import { webhookRoutes } from './routes/webhook.routes';
+import mensajeRoutes from './routes/mensaje.routes';
 
 import { adminRoutes } from './routes/admin.routes';
 import { denunciaRoutes } from './routes/denuncia.routes';
@@ -43,6 +44,7 @@ export function createApp() {
   app.use('/api/v1/mandados', mandadoRoutes);
   app.use('/api/v1/ofertas', ofertaRoutes);
   app.use('/api/v1/calificaciones', calificacionRoutes);
+  app.use('/api/v1/mandados', mensajeRoutes);
   app.use('/api/v1/denuncias', denunciaRoutes);
   app.use('/api/v1/admin', adminRoutes);
   app.use('/api', webhookRoutes);

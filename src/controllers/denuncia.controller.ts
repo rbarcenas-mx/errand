@@ -41,18 +41,19 @@ export class DenunciaController {
         return;
       }
 
-      const rows: Array<{ id: string; estado: string; creado_en: Date }> = await prisma.$queryRawUnsafe(
-        `INSERT INTO denuncias (id, id_denunciante, id_denunciado, id_mandado, motivo, descripcion, estado, creado_en)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'pendiente', NOW())
-         RETURNING id, estado, creado_en`,
-        req.usuario.sub,
-        data.id_usuario_denunciado,
-        data.id_mandado,
-        data.motivo,
-        data.descripcion,
-      );
+      const denuncia = await prisma.denuncia.create({
+        data: {
+          id_denunciante: req.usuario.sub,
+          id_denunciado: data.id_usuario_denunciado,
+          id_mandado: data.id_mandado,
+          motivo: data.motivo,
+          descripcion: data.descripcion,
+          estado: 'pendiente',
+        },
+        select: { id: true, estado: true, creado_en: true },
+      });
 
-      res.status(201).json(rows[0]);
+      res.status(201).json(denuncia);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(422).json({ error: 'Datos inválidos', detalles: error.errors });

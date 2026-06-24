@@ -200,10 +200,12 @@ export class AuthController {
           where: { OR: [{ id_calificador: userId }, { id_calificado: userId }] },
         }),
         prisma.oferta.deleteMany({ where: { id_mandadero: userId } }),
-        prisma.$executeRawUnsafe('DELETE FROM denuncias WHERE id_denunciante = $1 OR id_denunciado = $1', userId),
+        prisma.denuncia.deleteMany({
+          where: { OR: [{ id_denunciante: userId }, { id_denunciado: userId }] },
+        }),
         prisma.mandado.updateMany({
           where: { id_solicitante: userId },
-          data: { id_solicitante: '00000000-0000-0000-0000-000000000000' },
+          data: { id_solicitante: null },
         }),
         prisma.usuario.delete({ where: { id: userId } }),
       ]);

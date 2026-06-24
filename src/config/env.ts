@@ -32,3 +32,7 @@ export const env = {
 if (env.JWT_SECRET === 'dev-secret-change-in-production' && env.NODE_ENV === 'production') {
   throw new Error('JWT_SECRET debe cambiarse del valor por defecto en producción');
 }
+
+if (env.ALLOW_TEST_OTP && env.NODE_ENV === 'production') {
+  throw new Error('ALLOW_TEST_OTP no debe estar activo en producción — permite codigos OTP de prueba (123456)');
+}
