@@ -1,18 +1,18 @@
-# CI Workflow — Prepare & Execute
+# CI Workflow — Prepare, Execute & Ship
 
 ## Problema
 
-El flujo de trabajo spec-kit actual se enfoca en la generación de artefactos de especificación y código, pero no existe un mecanismo estandarizado para **orquestar operaciones de integración a GitHub** siguiendo mejores prácticas, como inicialización de repositorio git, creación de commits atómicos, o estructuración del historial del proyecto.
+El flujo de trabajo spec-kit actual se enfoca en la generación de artefactos de especificación y código, pero no existe un mecanismo estandarizado para **orquestar operaciones de integración a GitHub** siguiendo mejores prácticas, como inicialización de repositorio git, creación de commits atómicos, revisión de código pre-push, publicación a GitHub, o monitoreo de CI.
 
 Estas operaciones de integración se hacen de forma manual o ad-hoc dentro de la conversación con el agente, sin trazabilidad, sin capacidad de reanudación tras fallo, y sin una estrategia de rollback clara.
 
 ## Alcance
 
-Este flujo cubre exclusivamente operaciones de **integración continua (CI)**. El **despliegue continuo (CD)** queda fuera del alcance actual. Cuando se aborde la fase de deployment se evaluará si los skills existentes se modifican o se crean nuevos para CD.
+Este flujo cubre operaciones de **integración continua (CI)**: commits locales, revisión de código, push a GitHub y monitoreo de CI. El **despliegue continuo (CD)** queda fuera del alcance actual. Cuando se aborde la fase de deployment se evaluará si los skills existentes se modifican o se crean nuevos para CD.
 
-## Solución: `ci.prepare` + `ci.execute`
+## Solución: `ci.prepare` → `ci.execute` → `ci.ship`
 
-Dos skills complementarios que separan la **planificación** de la **ejecución**, siguiendo el mismo patrón que spec-kit (spec → plan → tasks → implement), pero enfocados en operaciones de integración del proyecto.
+Tres skills complementarios que separan la **planificación**, **ejecución local** y **publicación a GitHub**, siguiendo el mismo patrón que spec-kit (spec → plan → tasks → implement), pero enfocados en operaciones de integración del proyecto.
 
 ---
 
@@ -198,6 +198,88 @@ El executor corre cada línea en secuencia. Si alguna falla, notifica pero conti
 
 ---
 
+---
+
+## Skill 3: `ci.ship`
+
+### Propósito
+Validar (lint + build + tests), revisar código opcionalmente con `pr-review-expert`, subir commits a GitHub y monitorear CI. El orquestador (modelo remoto según AHORRO_MODO) coordina pasos atómicos con checkpoint, y delega el trabajo pesado a `run.py` (local).
+
+### Modos de operación
+
+- **`solo`** (default): push directo a `main` sin PR. Para desarrollo individual (trunk-based).
+- **`team`**: branch + PR via `gh`. Para equipos que requieren review antes de merge.
+
+### Comportamiento interactivo
+- Muestra el modo AHORRO_MODO y justificación del modelo orquestador
+- Cada fase (pre-flight, review, push, CI wait) se ejecuta como paso atómico con checkpoint
+- Antes de push: muestra resumen de lo que se subirá y pide confirmación explícita
+- Si el review detecta hallazgos bloqueantes: pregunta si corregir o forzar
+- Detecta y retoma ejecuciones interrumpidas mediante checkpoint JSON
+
+### Responsabilidades
+
+1. **Mostrar AHORRO_MODO y justificación del modelo orquestador**
+   - Resuelve modelo via `resolve_model("ci.ship")`
+   - Expone por qué se eligió ese modelo para su modo ahorro específico
+
+2. **Pre-flight (lint + build + tests)**
+   - Ejecuta secuencialmente vía `run.py`
+   - Muestra progreso en stderr
+   - Si falla: pregunta si corregir, forzar o abortar
+   - Registra checkpoint
+
+3. **Review opcional con `pr-review-expert`**
+   - Calcula diff `origin/main..HEAD`
+   - Invoca `pr-review-expert` con el diff
+   - Presenta hallazgos: MUST FIX, SHOULD FIX, SUGGESTIONS, LOOKS GOOD
+   - Pregunta al usuario: corregir, ignorar y subir, o abortar
+
+4. **Push a GitHub**
+   - Modo `solo`: `git push origin main`
+   - Modo `team`: branch + `git push -u origin <branch>` + `gh pr create`
+   - Confirmación explícita obligatoria antes de push
+   - Reporta resultado con URL del commit o PR
+
+5. **Monitoreo de CI**
+   - Polling via `gh run list` con barra de progreso
+   - Timeout configurable (default 300s)
+   - Reporta estado final: success / failure / timeout
+
+6. **Checkpoint y reanudación**
+   - Guarda progreso en `/tmp/opencode/ci_ship_progress.json`
+   - Fases: preflight, review, push, ci_wait
+   - Al iniciar: detecta fases ya completadas y las salta
+
+### Arquitectura
+
+```
+Orquestador (modelo remoto según AHORRO_MODO)
+  │
+  ├─ Paso 2: Mostrar AHORRO_MODO + justificación
+  ├─ Paso 3: Verificar repo, remote, modo (solo/team)
+  ├─ Paso 4: Detectar checkpoint y retomar
+  ├─ Paso 5: Delegar pre-flight → run.py (local)
+  ├─ Paso 6: Obtener diff contra origin/main
+  ├─ Paso 7: Invocar pr-review-expert (skill externo)
+  ├─ Paso 8: Delegar push → run.py (local)
+  ├─ Paso 9: Delegar CI wait → run.py (local)
+  └─ Paso 10: Reporte de tokens
+
+Ejecutor (run.py — 100% local, sin modelo):
+  ├─ CI_MODE=preflight → lint + build + tests
+  ├─ CI_MODE=push → git push
+  └─ CI_MODE=ci-wait → gh run list polling
+```
+
+### Archivos que consume/escribe
+
+- `/tmp/opencode/ci_ship_progress.json` — checkpoint de fases completadas
+- `/tmp/opencode/ci_ship_review.diff` — diff para review
+- `ci.config.json` — configuración de modo (solo/team)
+
+---
+
 ## Ciclo de vida típico
 
 1. El usuario ejecuta `/ci.prepare`
@@ -209,3 +291,11 @@ El executor corre cada línea en secuencia. Si alguna falla, notifica pero conti
 7. Después de cada tarea: reporte en terminal + checkpoint guardado
 8. Si falla, pregunta reintentar/saltar/rollback (con confirmación si es dangerous)
 9. Al completar, reporta resumen final con execution log actualizado
+10. El usuario ejecuta `/ci.ship`
+11. `ci.ship` muestra AHORRO_MODO y justificación del modelo
+12. Ejecuta pre-flight (lint, build, tests) con progreso
+13. Opcionalmente revisa el código con `pr-review-expert`
+14. Muestra resumen de commits a subir y pide confirmación
+15. Push a GitHub (directo a main en modo solo, branch + PR en modo team)
+16. Opcionalmente monitorea CI hasta completar
+17. Reporte final con token table
