@@ -22,53 +22,57 @@ model Usuario {
   ubicacion_lng        Float?
   puntuacion_promedio  Float     @default(0)
   total_calificaciones Int       @default(0)
+  verificado_en        DateTime? @db.Timestamptz(6)
   creado_en            DateTime  @default(now()) @db.Timestamptz(6)
   actualizado_en       DateTime  @updatedAt @db.Timestamptz(6)
 
-  mandados_solicitados Mandado[]       @relation("MandadoSolicitante")
-  ofertas              Oferta[]        @relation("OfertaMandadero")
-  calificaciones_dadas Calificacion[]  @relation("CalificacionCalificador")
+  mandados_solicitados     Mandado[]      @relation("MandadoSolicitante")
+  ofertas                  Oferta[]       @relation("OfertaMandadero")
+  calificaciones_dadas     Calificacion[] @relation("CalificacionCalificador")
   calificaciones_recibidas Calificacion[] @relation("CalificacionCalificado")
-  refresh_tokens       RefreshToken[]
-  mensajes_enviados    Mensaje[]
+  refresh_tokens           RefreshToken[]
+  mensajes_enviados        Mensaje[]
+  denuncias_realizadas     Denuncia[]     @relation("Denunciante")
+  denuncias_recibidas      Denuncia[]     @relation("Denunciado")
 
   @@map("usuarios")
 }
 
 model RefreshToken {
-  id              String   @id @default(uuid()) @db.Uuid
-  token_hash      String   @db.VarChar(255)
-  token_sha256    String   @unique @db.VarChar(64)
-  id_usuario      String   @db.Uuid
-  usuario         Usuario  @relation(fields: [id_usuario], references: [id], onDelete: Cascade)
-  expira_en       DateTime @db.Timestamptz(6)
-  creado_en       DateTime @default(now()) @db.Timestamptz(6)
+  id           String   @id @default(uuid()) @db.Uuid
+  token_hash   String   @db.VarChar(255)
+  token_sha256 String   @unique @db.VarChar(64)
+  id_usuario   String   @db.Uuid
+  usuario      Usuario  @relation(fields: [id_usuario], references: [id], onDelete: Cascade)
+  expira_en    DateTime @db.Timestamptz(6)
+  creado_en    DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("refresh_tokens")
 }
 
 model Mandado {
-  id                      String    @id @default(uuid()) @db.Uuid
-  id_solicitante          String    @db.Uuid
-  solicitante             Usuario   @relation("MandadoSolicitante", fields: [id_solicitante], references: [id])
-  titulo                  String    @db.VarChar(100)
-  descripcion             String    @db.Text
-  tipo                    String    @db.VarChar(20)
-  foto_url                String?
-  ubicacion_recogida_lat  Float
-  ubicacion_recogida_lng  Float
-  ubicacion_entrega_lat   Float
-  ubicacion_entrega_lng   Float
-  direccion_recogida      String    @db.Text
-  direccion_entrega       String    @db.Text
-  fecha_hora_limite       DateTime  @db.Timestamptz(6)
-  estado                  String    @default("publicado") @db.VarChar(20)
-  creado_en               DateTime  @default(now()) @db.Timestamptz(6)
-  actualizado_en          DateTime  @updatedAt @db.Timestamptz(6)
+  id                     String   @id @default(uuid()) @db.Uuid
+  id_solicitante         String   @db.Uuid
+  solicitante            Usuario  @relation("MandadoSolicitante", fields: [id_solicitante], references: [id])
+  titulo                 String   @db.VarChar(100)
+  descripcion            String   @db.Text
+  tipo                   String   @db.VarChar(20)
+  foto_url               String?
+  ubicacion_recogida_lat Float
+  ubicacion_recogida_lng Float
+  ubicacion_entrega_lat  Float
+  ubicacion_entrega_lng  Float
+  direccion_recogida     String   @db.Text
+  direccion_entrega      String   @db.Text
+  fecha_hora_limite      DateTime @db.Timestamptz(6)
+  estado                 String   @default("publicado") @db.VarChar(20)
+  creado_en              DateTime @default(now()) @db.Timestamptz(6)
+  actualizado_en         DateTime @updatedAt @db.Timestamptz(6)
 
-  ofertas        Oferta[]        @relation("OfertaMandado")
+  ofertas        Oferta[]       @relation("OfertaMandado")
   calificaciones Calificacion[]
   mensajes       Mensaje[]
+  Denuncia       Denuncia[]
 
   @@map("mandados")
 }
@@ -128,4 +132,20 @@ model Mensaje {
 
   @@index([id_mandado, creado_en])
   @@map("mensajes")
+}
+
+model Denuncia {
+  id             String   @id @default(uuid()) @db.Uuid
+  id_denunciante String   @db.Uuid
+  denunciante    Usuario  @relation("Denunciante", fields: [id_denunciante], references: [id])
+  id_denunciado  String   @db.Uuid
+  denunciado     Usuario  @relation("Denunciado", fields: [id_denunciado], references: [id])
+  id_mandado     String   @db.Uuid
+  mandado        Mandado  @relation(fields: [id_mandado], references: [id])
+  motivo         String   @db.VarChar(20)
+  descripcion    String   @db.Text
+  estado         String   @default("pendiente") @db.VarChar(20)
+  creado_en      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("denuncias")
 }
