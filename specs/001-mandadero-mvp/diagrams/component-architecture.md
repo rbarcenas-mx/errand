@@ -1,45 +1,66 @@
-# Diagrama de Arquitectura de Componentes
+# Arquitectura de Componentes
 
 [//]: # (INICIO_DIAGRAMA)
+
 ```mermaid
 flowchart TB
-    subgraph MobileApp ["Mobile App (React Native / Expo)"]
+    subgraph Client [App Móvil - React Native]
         direction TB
-        UI["UI Components\n(Screens, Buttons, Forms)"]
-        State["Estado Local\n(Context API / Zustand)"]
-        APIClient["API Client\n(Axios/Fetch)"]
-        AuthStore["Auth Store\n(JWT/Session)"]
-        GeoService["Servicio Geolocalización\n(Expo Location)"]
-        UI --> State
-        State --> APIClient
-        State --> AuthStore
-        APIClient --> GeoService
+        UI["Interfaz de Usuario (Expo)"]
+        Auth_Module["Módulo de Autenticación (OTP/Identidad)"]
+        Mandados_Module["Gestión de Mandados"]
+        Ofertas_Module["Gestión de Ofertas"]
+        Chat_Module["Canal de Mensajería Interna"]
+        Perfil_Module["Perfil, Calificaciones y Denuncias"]
     end
 
-    subgraph Backend ["Backend (Node.js + Express)"]
+    subgraph Backend [Servidor API - Node.js & Express]
         direction TB
-        Router["API Router"]
-        AuthMiddleware["Auth Middleware\n(JWT/OTP Verification)"]
-        Controller["Controllers\n(Mandado, Oferta, Usuario)"]
-        Service["Business Logic Services\n(Mandado Service, Auth Service)"]
-        Repo["Repositories/Data Access"]
-        Router --> AuthMiddleware
-        AuthMiddleware --> Controller
-        Controller --> Service
-        Service --> Repo
+        API_Gateway["API Gateway / Router"]
+        Auth_Service["Servicio de Autenticación (JWT/OTP)"]
+        Mandados_Service["Servicio de Mandados & Geocodificación"]
+        Ofertas_Service["Servicio de Ofertas y Negociación"]
+        Chat_Service["Servicio de Mensajería Interna"]
+        Admin_Service["Servicio Administrativo (Verificaciones/Denuncias)"]
     end
 
-    subgraph ExternalServices ["Servicios Externos & Infra"]
-        direction TB
+    subgraph DataLayer [Capa de Datos]
         DB[("PostgreSQL + PostGIS")]
-        Cloudinary["Cloudinary\n(Imágenes/Fotos)"]
-        Twilio["Twilio\n(SMS OTP)"]
-        AuthService["ID Verification Service\n(OCR/Selfie)"]
     end
 
-    APIClient --> Router
-    Repo --> DB
-    Service --> Cloudinary
-    Service --> Twilio
-    Service --> AuthService
+    subgraph ExternalServices [Servicios Externos e Infraestructura]
+        direction LR
+        Twilio["Twilio (SMS OTP)"]
+        Cloudinary["Cloudinary (Almacenamiento Imágenes)"]
+        Nominatim["Nominatim (Geocodificación)"]
+        FCM["Firebase Cloud Messaging (Push Notifications)"]
+        OCR_Service["Servicio de Verificación (OCR/Selfie)"]
+    end
+
+    %% Relaciones Cliente a Backend
+    UI --> Auth_Module
+    UI --> Mandados_Module
+    UI --> Ofertas_Module
+    UI --> Chat_Module
+    UI --> Perfil_Module
+
+    Auth_Module & Mandados_Module & Oferta_Module & Chat_Module & Perfil_Module <==> API_Gateway
+
+    %% Relaciones Backend Internas
+    API_Gateway --> Auth_Service
+    API_Gateway --> Mandados_Service
+    API_Gateway --> Ofertas_Service
+    API_Gateway --> Chat_Service
+    API_Gateway --> Admin_Service
+
+    %% Relaciones Backend a Datos
+    Auth_Service & Mandados_Service & Ofertas_Service & Chat_Service & Admin_Service <--> DB
+
+    %% Relaciones Backend a Externos
+    Auth_Service --> Twilio
+    Auth_Service --> OCR_Service
+    Mandados_Service --> Nominatim
+    Mandados_Service --> Cloudinary
+    Chat_Service --> FCM
+    Admin_Service --> Cloudinary
 ```

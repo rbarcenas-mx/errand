@@ -20,7 +20,7 @@
 ### Notificaciones
 - **Decisión**: Twilio (SMS + WhatsApp API)
 - **Razón**: Cobertura comprobada en México, API unificada para ambos canales.
-- **Costos estimados MVP**: SMS (~$0.08 USD/mensaje), WhatsApp (~$0.05 USD/mensaje). Con ~100 transacciones/mes y ~5 notificaciones por transacción, estimado ~$40-60 USD/mes.
+- **Costos estimados MVP**: SMS (~$0.0079 USD/mensaje a México), WhatsApp (~$0.05 USD/mensaje). Con ~100 transacciones/mes y ~5 notificaciones por transacción, estimado ~$4-6 USD/mes para SMS.
 - **Alternativas consideradas**: Firebase Cloud Messaging (solo push, no SMS/WhatsApp), AWS SNS (mayor complejidad).
 
 ### Autenticación

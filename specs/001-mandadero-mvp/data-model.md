@@ -19,7 +19,7 @@ Representa tanto a solicitantes como a mandaderos. Un usuario puede tener ambos 
 | correo_electronico | VARCHAR(255) | | Opcional, para recuperación |
 | foto_ine_url | TEXT | | URL de foto del INE (Cloudinary) |
 | foto_vivo_url | TEXT | | URL de selfie (Cloudinary) |
-| estado_verificacion | ENUM | NOT NULL, DEFAULT 'pendiente' | pendiente, aprobado, rechazado |
+| estado_verificacion | ENUM | NOT NULL, DEFAULT 'pendiente' | pendiente, pendiente_manual, aprobado, rechazado |
 | rol | ENUM | NOT NULL, DEFAULT 'ambos' | solicitante, mandadero, ambos |
 | ubicacion_lat | FLOAT | | Latitud predeterminada |
 | ubicacion_lng | FLOAT | | Longitud predeterminada |
@@ -27,10 +27,12 @@ Representa tanto a solicitantes como a mandaderos. Un usuario puede tener ambos 
 | total_calificaciones | INT | DEFAULT 0 | Conteo de calificaciones recibidas |
 | creado_en | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
 | actualizado_en | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+| verificado_en | TIMESTAMPTZ | | Fecha de aprobación de verificación de identidad |
 
 **Reglas de validación**:
 - `telefono` debe tener formato E.164 (+524421234567)
-- `estado_verificacion` solo cambia de `pendiente` → `aprobado` o `pendiente` → `rechazado`
+- `estado_verificacion` sigue el flujo: `pendiente` → `aprobado` / `pendiente_manual` / `rechazado`. Desde `pendiente_manual` puede ir a `aprobado` o `rechazado`. Desde `rechazado` puede volver a `pendiente` (reintento).
+- La transición a `pendiente_manual` ocurre cuando el servicio de OCR falla y se requiere revisión humana.
 - `puntuacion_promedio` se recalcula al insertar/actualizar cada `Calificacion`
 
 ---
@@ -128,6 +130,28 @@ Mensaje individual dentro del canal de mensajería interna entre Solicitante y M
 
 ---
 
+## Denuncia
+
+Reporte de incidente (acoso, fraude) post-transacción entre usuarios.
+
+| Campo | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| id | UUID | PK | |
+| id_denunciante | UUID | FK → Usuario.id, NOT NULL | Usuario que reporta |
+| id_denunciado | UUID | FK → Usuario.id, NOT NULL | Usuario reportado |
+| id_mandado | UUID | FK → Mandado.id, NOT NULL | Mandado asociado al incidente |
+| motivo | ENUM | NOT NULL | acoso, fraude, otro |
+| descripcion | TEXT | NOT NULL | Detalle del incidente |
+| estado | ENUM | NOT NULL, DEFAULT 'pendiente' | pendiente, aceptada, rechazada |
+| creado_en | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+
+**Reglas de validación**:
+- `id_denunciante` ≠ `id_denunciado`
+- Solo un administrador puede cambiar el estado de una denuncia
+- Si la denuncia es aceptada, el `estado_verificacion` del denunciado cambia a `rechazado`
+
+---
+
 ## Diagrama de Estados
 
 ### Mandado
@@ -150,5 +174,8 @@ pendiente ──→ aceptada
 ```
 pendiente ──→ aprobado
     │
-    └──→ rechazado
+    ├──→ pendiente_manual ──→ aprobado
+    │                       └──→ rechazado
+    │
+    └──→ rechazado ──→ pendiente (reintento)
 ```

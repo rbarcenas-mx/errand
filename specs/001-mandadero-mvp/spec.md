@@ -42,16 +42,16 @@ El Solicitante publica una nueva tarea (mandado) con ubicaciones de recogida/ent
 
 ### Historia de Usuario 2 - Ofertar y Contactar (Prioridad: P1)
 
-El Mandadero navega por las tareas disponibles, envía una oferta de precio y, tras la aceptación del Solicitante, recibe la información de contacto de forma inmediata y gratuita (sin pago en MVP).
+El Mandadero navega por las tareas disponibles, envía una oferta de precio y, tras la aceptación del Solicitante, se abre un canal de mensajería interna y se revela la información de contacto de ambas partes para coordinar la entrega.
 
-**Por qué esta prioridad**: Completa el ciclo de transacción y valida el modelo de negocio; la monetización (tarifa de contacto) se implementará en una fase posterior al MVP.
+**Por qué esta prioridad**: Completa el ciclo de transacción y valida el modelo de negocio. La monetización futura (tarifa de contacto) se implementará en una fase posterior, atada al valor del mandado y cobrada al momento de aceptar una oferta.
 
-**Prueba Independiente**: Puede probarse haciendo que un Mandadero envíe una oferta en una tarea existente y verificando que el Solicitante pueda aceptarla y ver los datos de contacto del Mandadero de inmediato.
+**Prueba Independiente**: Puede probarse haciendo que un Mandadero envíe una oferta en una tarea existente y verificando que el Solicitante pueda aceptarla, acceder al canal de mensajería y ver el teléfono del Mandadero.
 
 **Escenarios de Aceptación**:
 
 1. **Dado** que existe un mandado activo, **Cuando** un Mandadero autenticado envía una oferta con un precio, **Entonces** el Solicitante recibe una notificación de la nueva oferta.
-2. **Dado** que un Mandadero ha enviado una oferta, **Cuando** el Solicitante la acepta, **Entonces** la información de contacto del Mandadero (nombre y teléfono) se revela al Solicitante de forma inmediata y sin costo.
+2. **Dado** que un Mandadero ha enviado una oferta, **Cuando** el Solicitante la acepta, **Entonces** se abre un canal de mensajería interna entre ambos y se revela la información de contacto (nombre y teléfono) de ambas partes.
 3. **Dado** que un Mandadero no verificado intenta enviar una oferta, **Cuando** presiona enviar, **Entonces** el sistema rechaza la acción y muestra un mensaje indicando que debe completar la verificación de identidad.
 4. **Dado** que existe un mandado activo, **Cuando** el Solicitante rechaza una oferta, **Entonces** el Mandadero recibe una notificación de rechazo y la oferta se marca como "rechazada".
 5. **Dado** que una oferta no ha sido aceptada antes de la fecha límite del mandado, **Cuando** la fecha límite expira, **Entonces** la oferta se marca como "expirada" automáticamente.
@@ -64,11 +64,11 @@ Ambas partes confirman la finalización de la tarea y se califican mutuamente pa
 
 **Por qué esta prioridad**: La reputación es crítica para la seguridad de la plataforma y el crecimiento a largo paso, aunque es esencial solo después del uso inicial.
 
-**Prueba Independiente**: Puede probarse completando un flujo desde las Historias 1 y 2 y verificando que ambos usuarios puedan dejar una calificación con estrellas y un comentario.
+**Prueba Independiente**: Puede probarse completando un flujo desde las Historias 1 y 2 y verificando que el solicitante pueda marcar como completado y ambos usuarios dejar una calificación.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que un mandado está en estado "en_progreso", **Cuando** el Mandadero confirma la entrega, **Entonces** el estado cambia a "completado".
+1. **Dado** que un mandado está en estado "en_progreso", **Cuando** el Solicitante confirma la recepción, **Entonces** el estado cambia a "completado".
 2. **Dado** un mandado completado, **Cuando** ambas partes envían calificaciones, **Entonces** la calificación promedio de ambos usuarios se actualiza.
 3. **Dado** un mandado completado, **Cuando** una de las partes intenta calificar antes de que la otra haya completado el mandado, **Entonces** el sistema rechaza la calificación y muestra un mensaje de que el mandado debe estar completado.
 4. **Dado** un mandado completado, **Cuando** un usuario intenta calificar dos veces al mismo usuario para el mismo mandado, **Entonces** el sistema rechaza la segunda calificación con un error de "calificación duplicada".
@@ -96,12 +96,15 @@ Una vez que el Solicitante acepta una oferta, se abre un canal de mensajería in
 
 - **Ofertas fuera de rango**: Un Mandadero puede enviar cualquier oferta, independientemente de si es alta o baja. El Solicitante tiene la opción de aceptarla o rechazarla sin restricciones del sistema.
 - **Verificación de identidad fallida**: Si el INE o selfie son borrosos, inválidos o no coinciden, el sistema DEBE rechazar la validación. El usuario recibe una notificación con el motivo del rechazo y puede reintentar subiendo nuevos documentos. Las restricciones de acceso se aplican según la Matriz de Acceso por Estado de Verificación (ver sección siguiente).
+- **Verificación de identidad con OCR no disponible**: Si el servicio de OCR externo falla (timeout, error, no disponible), el sistema DEBE asignar el estado `pendiente_manual` en lugar de bloquear al usuario. Un administrador humano revisa los documentos desde un panel y decide si aprueba o rechaza la verificación. El usuario recibe notificación del resultado. El SLA objetivo para la revisión manual es de 12 horas hábiles. Si se supera este plazo sin acción del administrador, el sistema DEBE renotificar al equipo administrativo.
 - **Cancelación de mandado**: El Solicitante puede cancelar un mandado mientras esté en estado "pendiente" o "en_progreso". Al cancelar, todas las ofertas asociadas se marcan como "rechazadas" y se notifica a los Mandaderos involucrados.
 - **Expiración de oferta**: Una oferta no aceptada expira automáticamente al vencer la fecha límite del mandado. El Mandadero recibe una notificación de que su oferta expiró.
 - **Rechazo de oferta por el Solicitante**: Cuando el Solicitante rechaza una oferta, el Mandadero recibe una notificación y la oferta se marca como "rechazada". El Mandadero puede enviar una nueva oferta si el mandado sigue activo.
 - **Cuenta duplicada**: Si un usuario intenta registrarse con un número de teléfono ya existente, el sistema DEBE rechazar el registro y notificar que la cuenta ya existe.
 - **Formato inválido**: Si el usuario ingresa ubicaciones, precios o descripciones con formato inválido, el sistema DEBE devolver un error de validación descriptivo sin crear el recurso.
 - **Confirmación de ubicación**: Al crear un mandado, el sistema DEBE devolver la dirección normalizada por el motor de geocodificación y solicitar confirmación del usuario antes de publicar el mandado.
+- **Reporte de incidente post-transacción**: Si un usuario experimenta acoso, fraude o cualquier incidente tras la revelación de contacto, puede reportarlo mediante el endpoint `POST /api/v1/denuncias`. El administrador revisa las denuncias desde `GET /api/v1/admin/denuncias-pendientes` y puede sancionar al infractor cambiando su `estado_verificacion` a `rechazado` mediante `POST /api/v1/admin/denuncias/:id/resolver`.
+- **SLA de verificación manual**: El SLA de 12 horas hábiles para revisión manual de documentos es adecuado para un MVP donde el rol de administrador recae en el mismo equipo de desarrollo. En producción se recomienda reducir este SLA y/o automatizar el proceso.
 
 ### Manejo de Datos Sensibles
 
@@ -115,16 +118,22 @@ Una vez que el Solicitante acepta una oferta, se abre un canal de mensajería in
 
 Define qué acciones puede realizar un usuario según su `estado_verificacion`:
 
-| Acción | pendiente | aprobado | rechazado |
-|---|---|---|---|
-| Ver listado de mandados (título, tipo, distancia, fecha límite) | ✅ | ✅ | ✅ |
-| Ver detalle de mandado (descripción, dirección exacta) | ❌ (solo colonia/sector) | ✅ | ❌ (solo colonia/sector) |
-| Publicar mandados como Solicitante | ✅ | ✅ | ✅ |
-| Enviar ofertas como Mandadero | ❌ | ✅ | ❌ |
-| Ver información de contacto del Mandadero (teléfono) | ❌ | ✅ | ❌ |
-| Calificar a la contraparte tras completar mandado | ❌ | ✅ | ❌ |
+| Acción | pendiente | pendiente_manual | aprobado | rechazado |
+|---|---|---|---|---|---|
+| Ver listado de mandados (título, tipo, distancia, fecha límite) | ✅ | ✅ | ✅ | ✅ |
+| Ver detalle de mandado (descripción, dirección exacta) | ❌ (solo colonia/sector) | ❌ (solo colonia/sector) | ✅ | ❌ (solo colonia/sector) |
+| Publicar mandados como Solicitante | ❌ | ✅ | ✅ | ❌ |
+| Enviar ofertas como Mandadero | ❌ | ❌ | ✅ | ❌ |
+| Ver información de contacto de la contraparte (teléfono) | ❌ | ❌ | ✅ | ❌ |
+| Calificar a la contraparte tras completar mandado | ❌ | ❌ | ✅ | ❌ |
 
-**Datos sensibles definidos**: se considera "dato sensible" el número de teléfono de cualquier usuario y las ubicaciones exactas de recogida/entrega. La dirección exacta solo es visible para usuarios verificados (estado `aprobado`). Los usuarios con estado `pendiente` o `rechazado` solo ven la colonia o sector general.
+**Datos sensibles definidos**: se considera "dato sensible" el número de teléfono de cualquier usuario y las ubicaciones exactas de recogida/entrega. La dirección exacta solo es visible para usuarios verificados (estado `aprobado` o `pendiente_manual`). Los usuarios con estado `pendiente` o `rechazado` solo ven la colonia o sector general. El número de teléfono de la contraparte se revela a ambas partes al aceptar una oferta.
+
+**Justificación — Publicación de mandados para `pendiente_manual`**: Un usuario con estado `pendiente_manual` ya ha subido sus documentos de identidad (INE + selfie) y está en espera de revisión manual. Se le permite publicar mandados como solicitante porque:
+1. Ya completó el paso más crítico de verificación (carga de documentos reales).
+2. Publicar un mandado no implica recibir pagos ni acceder a datos sensibles de otros usuarios.
+3. Restringir esta acción retrasaría la adopción sin un beneficio de seguridad significativo.
+4. El contacto del solicitante solo se revela al aceptar una oferta, momento en el que ya debe estar `aprobado`.
 
 **Nota**: Un usuario con `estado_verificacion = rechazado` puede volver a subir su documentación para solicitar una nueva verificación.
 
@@ -136,10 +145,11 @@ Define qué acciones puede realizar un usuario según su `estado_verificacion`:
 - **FR-002**: El sistema DEBE permitir a los Solicitantes publicar mandados con ubicaciones de recogida/entrega, fecha límite y descripción.
 - **FR-003**: El sistema DEBE permitir a los Mandaderos enviar ofertas de precio para mandados activos.
 - **FR-004**: (DIFERIDO) El sistema NO gestiona pagos en el MVP. La monetización (tarifa de contacto) se implementará en una fase posterior.
-- **FR-005**: El sistema DEBE revelar la información de contacto del Mandadero al Solicitante inmediatamente después de que la oferta sea aceptada, sin requerir pago previo (MVP gratuito).
+- **FR-005**: El sistema DEBE revelar la información de contacto de ambas partes (nombre y teléfono) inmediatamente después de que la oferta sea aceptada y se abra el canal de mensajería. Antes de la revelación, el sistema DEBE solicitar confirmación explícita al solicitante (consentimiento para compartir su contacto con el mandadero).
 - **FR-006**: El sistema DEBE permitir a los usuarios calificarse mutuamente tras la finalización de la tarea.
-- **FR-007**: El sistema DEBE permitir a los usuarios subir una foto de su INE y una selfie (foto en vivo) para iniciar el proceso de verificación de identidad. El sistema procesará los documentos de forma asíncrona y notificará al usuario el resultado (`aprobado` o `rechazado`). Un usuario con verificación rechazada puede reintentar la verificación subiendo nuevos documentos.
+- **FR-007**: El sistema DEBE permitir a los usuarios subir una foto de su INE y una selfie (foto en vivo) para iniciar el proceso de verificación de identidad. El sistema procesará los documentos de forma asíncrona (vía OCR/servicio externo) y notificará al usuario el resultado (`aprobado` o `rechazado`). Un usuario con verificación rechazada puede reintentar la verificación subiendo nuevos documentos. Si el servicio de OCR falla o no está disponible, el sistema DEBE asignar el estado `pendiente_manual` y notificar a un administrador para que revise y apruebe/rechace manualmente los documentos.
 - **FR-008**: El sistema DEBE habilitar un canal de mensajería interna entre Solicitante y Mandadero una vez que una oferta es aceptada. El canal DEBE permitir el envío y recepción de mensajes de texto, y DEBE cerrarse a nuevos mensajes cuando el mandado se completa (solo lectura).
+- **FR-009**: El sistema DEBE permitir a los usuarios reportar incidentes (acoso, fraude) post-transacción mediante un endpoint de denuncias. El administrador DEBE poder listar las denuncias pendientes y sancionar al usuario infractor cambiando su `estado_verificacion` a `rechazado`. Los endpoints del panel de administración (`/admin/`) DEBEN estar protegidos con autenticación JWT (`authenticate`) y verificación de rol administrador (`requireAdmin`), identificado por el número telefónico configurado en `ADMIN_TELEFONO`.
 
 ### Entidades Clave
 
@@ -148,6 +158,7 @@ Define qué acciones puede realizar un usuario según su `estado_verificacion`:
 - **Mandado**: La solicitud de servicio principal; contiene ubicaciones, tipo (compra/trámite) y fecha límite.
 - **Oferta**: El puente entre un Mandado y un Mandadero; contiene el precio propuesto y el estado.
 - **Mensaje**: Representa un mensaje individual dentro de un canal entre Solicitante y Mandadero para un mandado aceptado. Contiene el texto, remitente, fecha de envío y estado de lectura.
+- **Denuncia**: Reporte de incidente post-transacción entre usuarios. Contiene el denunciante, denunciado, mandado asociado, motivo y estado.
 
 ## Criterios de Éxito *(obligatorio)*
 
@@ -165,3 +176,4 @@ Define qué acciones puede realizar un usuario según su `estado_verificacion`:
 - El lanzamiento inicial está estrictamente limitado a Querétaro y su área metropolitana.
 - La verificación de identidad (carga de INE) proporciona suficiente confianza para una etapa de MVP.
 - **Proveedor de SMS**: Twilio, limitado exclusivamente a registro, autenticación y recuperación de acceso. Toda la mensajería del flujo de mandados (coordinación entre Solicitante y Mandadero) se realiza mediante mensajería interna en la plataforma. En caso de fallo del servicio de Twilio, el sistema usará validación por email como mecanismo de contingencia. El costo operativo estimado es de ~$0.0079 USD por SMS enviado.
+- **Geocodificación**: Nominatim (OpenStreetMap) para normalización de direcciones. La precisión depende de la calidad del mapeo de la zona. Para el área metropolitana de Querétaro se espera una tasa de acierto suficiente para el MVP. Como mejora post-MVP se recomienda migrar a Google Places API o similar.

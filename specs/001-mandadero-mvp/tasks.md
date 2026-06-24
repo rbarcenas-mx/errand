@@ -8,6 +8,7 @@
 - [x] T005 Configure Twilio SDK for SMS (auth only: registration, OTP, access recovery) in `src/services/notification.service.ts`
 
 ## Phase 2: Foundational
+- [x] T005b [P] Implement rate limiting middleware on auth routes (register + verify-otp) to prevent SMS bombing in `src/app.ts`
 - [x] T006 [P] Implement Authentication Middleware with JWT in `src/middleware/auth.middleware.ts`
 - [x] T006b [P] Implement Authorization Middleware by verification status in `src/middleware/auth.middleware.ts`
 - [x] T007 [P] Setup Database Migrations for `Usuario`, `Mandado`, and `Oferta` entities
@@ -22,7 +23,7 @@
 - [x] T014 [US1] Implement POST `/api/mandados` controller in `src/controllers/mandado.controller.ts`
 - [x] T015 [US1] Implement GET `/api/mandados` with spatial filtering in `src/controllers/mandado.controller.ts`
 - [x] T016 [US1] Create Integration Tests for Mandado lifecycle in `tests/integration/mandado.test.ts`
-- [ ] T016c [US1] Integrate geocoding service (OpenStreetMap/Nominatim) to normalize addresses in `src/services/geocoding.service.ts`
+- [x] T016c [US1] Integrate geocoding service (OpenStreetMap/Nominatim) to normalize addresses in `src/services/geocoding.service.ts`
 
 ## Phase 4b: Auth & Verification Tests
 - [x] T016a Create Integration Tests for Auth (register + verify-otp) in `tests/integration/auth.test.ts`
@@ -51,11 +52,35 @@
 - [x] T029 Generate API documentation (Swagger/OpenAPI) in `docs/api.yaml`
 - [x] T030 Write technical README with setup instructions in `README.md`
 
+## Phase 6b: Verificacion Manual (Admin)
+- [x] T043a Agregar estado `pendiente_manual` al enum `EstadoVerificacion` en `prisma/schema.prisma`
+- [x] T043b Capturar error de OCR en `src/services/verification.service.ts` y degradar a `pendiente_manual`
+- [x] T043c Implementar funcion `revisarVerificacion` en `src/services/verification.service.ts` para aprobar/rechazar manualmente
+- [x] T043d Crear `src/routes/admin.routes.ts` con GET `/api/v1/admin/verificaciones-pendientes` y POST `/api/v1/admin/verificaciones/:id/revisar`
+- [x] T043e Montar rutas de admin en `src/app.ts`
+- [x] T043f Crear middleware `requireAdmin` en `src/middleware/auth.middleware.ts`
+- [x] T043g Pruebas de integracion para flujo de verificacion manual
+- [x] T043h Definir SLA de 12 horas habiles para revision manual con renotificacion automatica al equipo admin
+- [x] T043i Implementar notificacion al usuario cuando admin aprueba o rechaza documentos en `src/services/verification.service.ts` (revisarVerificacion llama a notifyVerificacionCompleta)
+
+## Phase 6c: Limpieza de Datos Sensibles
+- [x] T033a Implementar `src/services/cleanup.service.ts` con scheduler diario que elimina fotos de verificación vencidas
+- [x] T033b Iniciar `cleanupService` en `src/index.ts`
+- [x] T033c Agregar campo `verificado_en` al modelo Usuario en `prisma/schema.prisma`
+- [x] T033d Actualizar `verification.service.ts` para llenar `verificado_en` al aprobar
+
+## Phase 6d: Denuncias
+- [x] T048 Agregar modelo Denuncia a `prisma/schema.prisma`
+- [x] T049 Crear `src/controllers/denuncia.controller.ts` con POST para crear denuncias
+- [x] T050 Crear `src/routes/denuncia.routes.ts` y montar en `app.ts`
+- [x] T051 Agregar rutas admin para listar y resolver denuncias en `src/routes/admin.routes.ts`
+- [x] T052 Implementar logica de sancion en `POST /admin/denuncias/:id/resolver` que cambie `estado_verificacion` del denunciado a `rechazado` al resolver con accion `rechazar_usuario`
+
 ## Phase 7: Production & Deployment
 - [ ] T031 Configure Railway.app production environment and env vars in `railway.json`
-- [ ] T032 Set up Sentry error monitoring in `src/config/sentry.ts`
-- [ ] T033 Implement data retention policy (auto-delete verification images after 90d) in `src/jobs/cleanup.job.ts`
-- [ ] T034 Implement account deletion endpoint (DELETE /api/auth/cuenta) in `src/controllers/auth.controller.ts`
+- [x] T032 Set up Sentry error monitoring in `src/config/sentry.ts`
+- [x] T033 Implement data retention policy (auto-delete verification images after 90d) in `src/jobs/cleanup.job.ts`
+- [x] T034 Implement account deletion endpoint (DELETE /api/auth/cuenta) in `src/controllers/auth.controller.ts`
 - [ ] T035 Set up automated DB migrations on deploy in `package.json` scripts
 - [ ] T036 Smoke tests for production deployment in `tests/smoke/production.test.ts`
 
@@ -68,6 +93,12 @@
 - [x] T042 [US4] Implement read-only restriction for completed/cancelled mandados in `src/middleware/chat.middleware.ts`
 - [x] T043 [US4] Create Integration Tests for Messaging flow in `tests/integration/mensaje.test.ts`
 
+## Phase 9: Post-MVP — Notificaciones Push
+- [ ] T044 Integrate Firebase Cloud Messaging (FCM) SDK in backend
+- [ ] T045 Create endpoint `POST /api/v1/notificaciones/registrar-token` for device token registration
+- [ ] T046 Implement push notification service for: nueva oferta, oferta aceptada, mensaje nuevo, mandado completado
+- [ ] T047 Implement in-app polling as fallback when FCM is unavailable
+
 ## Dependencies
 - Phase 2 must be completed before Phase 3, 4, or 5.
 - Phase 3 (Mandados) is a prerequisite for Phase 4 (Ofertas).
@@ -77,3 +108,11 @@
 
 ## Implementation Strategy
 **MVP Scope**: All phases completed.
+
+## Trazabilidad de Auditoria
+
+Los siguientes puntos fueron identificados como falsos positivos por el modelo de auditoria y se documentan para evitar que reaparezcan:
+
+- **Fraude al completar mandado**: Mitigado via FR-005 (contacto se revela al aceptar oferta, no al completar) + endpoint de denuncias implementado.
+- **Race condition en ofertas**: Transaccion ACID implementada en `mandado.service.ts:acceptOferta`.
+- **SMS bombing sin proteccion**: Rate limiting por IP/telefono implementado en `app.ts` (authLimiter) + cuota global documentada en plan.

@@ -1,35 +1,72 @@
-# Diagrama de Pantallas y Navegación
+# Flujo de Pantallas
 
 [//]: # (INICIO_DIAGRAMA)
+
 ```mermaid
 flowchart TD
-    Start(("Inicio")) --> Login{"¿Tiene sesión?"}
-    Login -- No --> AuthFlow["Flujo de Autenticación\n(Registro/Login + OTP)"]
-    Login -- Sí --> Home[Home Pantalla Principal]
-    
-    AuthFlow --> VerifyID["Verificación Identidad\n(Selfie + INE)"]
-    VerifyID --> Home
+  Start((Inicio))
+  
+  %% Autenticación
+  Start --> Auth{¿Tiene Cuenta?}
+  Auth -- No --> Reg[Registro: Teléfono y Nombre]
+  Auth -- Si --> Log[Login: OTP via SMS]
+  
+  Reg --> OTP[Validación OTP]
+  Log --> OTP
 
-    Home --> NewMandado["Crear Nuevo Mandado"]
-    Home --> ListMandados["Mis Mandados"]
-    Home --> Profile["Mi Perfil/Configuración"]
+  %% Proceso de Verificación de Identidad
+  OTP --> VerifCheck{Estado de Verificación}
+  
+  subgraph "Proceso de Verificación (FR-007)"
+    VerifCheck -- "Pendiente / Manual" --> ID_Upload[Subir INE y Selfie]
+    ID_Upload --> VerifCheck
+  end
 
-    NewMandado --> FormMandado["Formulario de Mandado\n(Detalles, Ubicación, Fecha)"]
-    FormMandado --> Publish["Publicar Mandado"]
-    Publish --> Home
+  %% Navegación Principal según Estado
+  VerifCheck -- "Aprobado" --> MainTabs[App Principal: Acceso Total]
+  VerifCheck -- "Pendiente / Rechazado" --> LimitedView[Vista Limitada: Solo Listado]
 
-    ListMandados --> DetailMandado["Detalle del Mandado"]
-    DetailMandado --> OfferAction{"¿Es Mandadero?"}
-    OfferAction -- Sí --> MakeOffer["Realizar Oferta"]
-    OfferAction -- No --> ViewDetails["Ver Detalles/Chat"]
+  subgraph "Navegación por Tabs (Aprobado)"
+    MainTabs --> TabHome[Explorar Mandados Cercanos]
+    MainTabs --> TabMyTasks[Mis Mandados y Ofertas]
+    MainTabs --> TabChat[Mensajes / Chats]
+    MainTabs --> TabProfile[Perfil y Configuración]
+  end
 
-    MakeOffer --> OfferStatus{"¿Oferta Aceptada?"}
-    OfferStatus -- Sí --> ChatAccess["Acceso a Mensajería Interna"]
-    OfferStatus -- No --> DetailMandado
+  %% Flujo de Solicitante
+  subgraph "Flujo Solicitante (HU1)"
+    TabHome --> CreateM[Crear Nuevo Mandado]
+    CreateM --> DetailM[Detalle del Mandado]
+    TabMyTasks --> ViewOffers[Ver Ofertas Recibidas]
+    ViewOffers --> AcceptOffer[Aceptar/Rechazar Oferta]
+    AcceptOffer --> ChatRoom
+  end
 
-    ChatAccess --> ChatScreen["Pantalla de Chat"]
-    ChatScreen --> DetailMandado
+  %% Flujo de Mandadero
+  subgraph "Flujo Mandadero (HU2)"
+    TabHome --> DetailM
+    DetailM --> SendOffer[Enviar Oferta]
+    SendOffer --> ChatRoom
+  end
 
-    Profile --> EditProfile["Editar Perfil/Datos"]
-    EditProfile --> Profile
+  %% Interacción y Cierre
+  subgraph "Interacción y Post-Servicio (HU3, HU4, FR-009)"
+    ChatRoom[Chat Activo: Mensajería Interna] --> CompleteTask[Confirmar Finalización]
+    CompleteTask --> Rating[Calificación Mutua]
+    ChatRoom --> Report[Denunciar Incidente/Usuario]
+  end
+
+  %% Restricciones de la Matriz de Acceso
+  subgraph "Restricciones (Matriz de Acceso)"
+    LimitedView --> TabHome
+    LimitedView -.-> |Bloqueado| CreateM
+    LimitedView -.-> |Bloqueado| SendOffer
+    LimitedView -.-> |Bloqueado| DetailM
+  end
+
+  %% Perfil y Cuenta
+  subgraph "Gestión de Cuenta"
+    TabProfile --> Settings[Configuración]
+    Settings --> DeleteAcc[Eliminar Cuenta]
+  end
 ```

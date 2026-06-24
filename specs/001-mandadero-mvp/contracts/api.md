@@ -10,14 +10,14 @@ Formato: REST sobre HTTP/JSON. Base URL: `/api/v1`
 - **Revocación**: Al hacer logout o detectar fraude, el refresh token se elimina de la BD, invalidando la sesión de forma efectiva.
 - **Rotación**: Cada vez que se usa el refresh token para obtener un nuevo access token, se emite también un nuevo refresh token (rotación de un solo uso).
 - **Endpoints requeridos**:
-  - `POST /api/auth/refresh` — obtener nuevo access token con refresh token válido.
-  - `POST /api/auth/logout` — revocar refresh token activo.
+  - `POST /api/v1/auth/refresh` — obtener nuevo access token con refresh token válido.
+  - `POST /api/v1/auth/logout` — revocar refresh token activo.
 
 ---
 
 ## Autenticación
 
-### POST /api/auth/register
+### POST /api/v1/auth/register
 Registrar nuevo usuario con teléfono.
 
 **Request**:
@@ -41,7 +41,7 @@ Registrar nuevo usuario con teléfono.
 
 ---
 
-### POST /api/auth/verify-otp
+### POST /api/v1/auth/verify-otp
 Validar código OTP recibido por SMS.
 
 **Request**:
@@ -79,7 +79,7 @@ Validar código OTP recibido por SMS.
 
 ---
 
-### POST /api/auth/refresh
+### POST /api/v1/auth/refresh
 Obtener nuevo access token usando un refresh token válido.
 
 **Request**:
@@ -101,7 +101,7 @@ Obtener nuevo access token usando un refresh token válido.
 
 ---
 
-### POST /api/auth/logout
+### POST /api/v1/auth/logout
 Revocar el refresh token activo e invalidar la sesión.
 
 **Headers**: `Authorization: Bearer <token>`
@@ -124,7 +124,7 @@ Revocar el refresh token activo e invalidar la sesión.
 
 ---
 
-### POST /api/auth/verify-identity
+### POST /api/v1/auth/verify-identity
 Subir INE + selfie para verificación de identidad.
 
 **Request**: `multipart/form-data`
@@ -145,7 +145,7 @@ foto_vivo: File (imagen JPG/PNG, max 5MB)
 
 ---
 
-### GET /api/auth/verification-status
+### GET /api/v1/auth/verification-status
 Consultar el estado actual de la verificación de identidad.
 
 **Headers**: `Authorization: Bearer <token>`
@@ -193,7 +193,7 @@ form-data:
 
 ## Mandados
 
-### GET /api/mandados
+### GET /api/v1/mandados
 Listar mandados activos cercanos a una ubicación.
 
 **Query params**:
@@ -230,7 +230,7 @@ Listar mandados activos cercanos a una ubicación.
 
 ---
 
-### POST /api/mandados
+### POST /api/v1/mandados
 Crear nuevo mandado (solicitante autenticado).
 
 **Request**:
@@ -256,7 +256,7 @@ Crear nuevo mandado (solicitante autenticado).
 
 ---
 
-### GET /api/mandados/:id
+### GET /api/v1/mandados/:id
 Obtener detalle completo de un mandado. Los campos de dirección exacta solo se incluyen si el usuario solicitante tiene estado de verificación `aprobado`. De lo contrario, solo se devuelve `colonia`.
 
 **Response 200**:
@@ -287,7 +287,7 @@ Obtener detalle completo de un mandado. Los campos de dirección exacta solo se 
 
 ## Ofertas
 
-### POST /api/mandados/:id/ofertas
+### POST /api/v1/mandados/:id/ofertas
 Enviar oferta para un mandado (mandadero autenticado).
 
 **Request**:
@@ -310,7 +310,7 @@ Enviar oferta para un mandado (mandadero autenticado).
 
 ---
 
-### GET /api/mandados/:id/ofertas
+### GET /api/v1/mandados/:id/ofertas
 Listar ofertas de un mandado (solo solicitante propietario).
 
 **Response 200**:
@@ -337,7 +337,7 @@ Listar ofertas de un mandado (solo solicitante propietario).
 
 ---
 
-### PATCH /api/ofertas/:id
+### PATCH /api/v1/ofertas/:id
 Aceptar o rechazar una oferta (solicitante propietario).
 
 **Request**:
@@ -363,7 +363,7 @@ Valores: `aceptada`, `rechazada`
 
 ---
 
-### PATCH /api/mandados/:id/estado
+### PATCH /api/v1/mandados/:id/estado
 Cambiar estado de un mandado.
 
 **Request**:
@@ -372,7 +372,7 @@ Cambiar estado de un mandado.
   "estado": "completado"
 }
 ```
-Valores: `completado` (mandadero), `cancelado` (solicitante)
+Valores: `completado` (solicitante), `cancelado` (solicitante)
 
 **Response 200**:
 ```json
@@ -387,7 +387,7 @@ Valores: `completado` (mandadero), `cancelado` (solicitante)
 
 ## Calificaciones
 
-### POST /api/calificaciones
+### POST /api/v1/calificaciones
 Calificar a la contraparte post-transacción. Solo puede calificar quien participó en el mandado (solicitante o mandadero) y solo una vez por mandado.
 
 **Headers**: `Authorization: Bearer <token>`
@@ -427,7 +427,7 @@ Calificar a la contraparte post-transacción. Solo puede calificar quien partici
 
 ## Mensajería
 
-### GET /api/mandados/:id/mensajes
+### GET /api/v1/mandados/:id/mensajes
 Obtener mensajes del canal de un mandado aceptado. Solo accesible para el Solicitante y el Mandadero de la oferta aceptada.
 
 **Headers**: `Authorization: Bearer <token>`
@@ -455,7 +455,7 @@ Obtener mensajes del canal de un mandado aceptado. Solo accesible para el Solici
 
 ---
 
-### POST /api/mandados/:id/mensajes
+### POST /api/v1/mandados/:id/mensajes
 Enviar un mensaje en el canal del mandado. Solo accesible para participantes del mandado con oferta aceptada.
 
 **Headers**: `Authorization: Bearer <token>`
@@ -481,3 +481,158 @@ Enviar un mensaje en el canal del mandado. Solo accesible para participantes del
 - 403 — el mandado no tiene oferta aceptada o el usuario no es participante
 - 404 — mandado no encontrado
 - 422 — `texto` excede 1000 caracteres
+
+---
+
+## Administración
+
+### GET /api/v1/admin/verificaciones-pendientes
+Listar usuarios pendientes de revisión manual de identidad.
+
+**Headers**: `Authorization: Bearer <token>` (admin)
+
+**Response 200**:
+```json
+{
+  "verificaciones": [
+    {
+      "id": "uuid",
+      "nombre_completo": "Juan Pérez",
+      "correo_electronico": "juan@ejemplo.com",
+      "telefono": "+524421234567",
+      "foto_ine_url": "https://cloudinary.com/ine.jpg",
+      "foto_vivo_url": "https://cloudinary.com/selfie.jpg",
+      "creado_en": "2026-06-19T10:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+**Errores**: 401 (no autenticado), 403 (no admin)
+
+---
+
+### POST /api/v1/admin/verificaciones/:id/revisar
+Aprobar o rechazar una verificación manual de identidad.
+
+**Headers**: `Authorization: Bearer <token>` (admin)
+
+**Request**:
+```json
+{
+  "accion": "aprobar",
+  "motivo": "Documentos válidos, identidad confirmada"
+}
+```
+Valores de `accion`: `aprobar`, `rechazar`
+
+**Response 200**:
+```json
+{
+  "estado": "aprobado",
+  "mensaje": "Tu verificación de identidad ha sido aprobada"
+}
+```
+
+**Errores**: 400 (acción inválida o estado incorrecto), 401 (no autenticado), 403 (no admin), 404 (usuario no encontrado)
+
+---
+
+### GET /api/v1/admin/denuncias-pendientes
+Listar denuncias de incidentes pendientes de revisión.
+
+**Headers**: `Authorization: Bearer <token>` (admin)
+
+**Response 200**:
+```json
+{
+  "denuncias": [
+    {
+      "id": "uuid",
+      "motivo": "acoso",
+      "descripcion": "El usuario me acosó después de la entrega",
+      "creado_en": "2026-06-19T10:00:00Z",
+      "denunciante": { "id": "uuid", "nombre_completo": "Ana García", "telefono": "+524421234567" },
+      "denunciado": { "id": "uuid", "nombre_completo": "Carlos López", "telefono": "+524427654321" },
+      "mandado": { "id": "uuid", "titulo": "Comprar tortillas", "estado": "completado" }
+    }
+  ],
+  "total": 1
+}
+```
+
+**Errores**: 401 (no autenticado), 403 (no admin)
+
+---
+
+### POST /api/v1/admin/denuncias/:id/resolver
+Resolver una denuncia sancionando al usuario o desestimándola.
+
+**Headers**: `Authorization: Bearer <token>` (admin)
+
+**Request**:
+```json
+{
+  "accion": "rechazar_usuario"
+}
+```
+Valores de `accion`: `rechazar_usuario` (cambia estado_verificacion a rechazado), `desestimar` (cierra denuncia sin acción)
+
+**Response 200**:
+```json
+{
+  "mensaje": "Usuario sancionado"
+}
+```
+
+**Errores**: 400 (acción inválida), 401 (no autenticado), 403 (no admin), 404 (denuncia no encontrada)
+
+---
+
+## Denuncias
+
+### POST /api/v1/denuncias
+Reportar un incidente post-transacción.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request**:
+```json
+{
+  "id_usuario_denunciado": "uuid",
+  "id_mandado": "uuid",
+  "motivo": "acoso",
+  "descripcion": "Después de completar el mandado, el usuario me envió mensajes inapropiados"
+}
+```
+Valores de `motivo`: `acoso`, `fraude`, `otro`
+
+**Response 201**:
+```json
+{
+  "id": "uuid",
+  "estado": "pendiente",
+  "creado_en": "2026-06-19T10:00:00Z"
+}
+```
+
+**Errores**: 400 (auto-denuncia), 401 (no autenticado), 404 (usuario o mandado no encontrado), 422 (datos inválidos)
+
+---
+
+## Cuenta
+
+### DELETE /api/v1/auth/cuenta
+Eliminar cuenta y todos los datos personales asociados.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response 200**:
+```json
+{
+  "mensaje": "Cuenta eliminada correctamente"
+}
+```
+
+**Errores**: 401 (no autenticado)

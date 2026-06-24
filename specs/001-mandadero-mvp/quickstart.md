@@ -31,6 +31,7 @@ CLOUDINARY_API_KEY=tu_key
 CLOUDINARY_API_SECRET=tu_secret
 JWT_SECRET=clave_secreta_para_jwt
 PORT=3000
+ALLOW_TEST_OTP=true
 ```
 
 ```bash
@@ -62,6 +63,7 @@ curl -X POST http://localhost:3000/api/v1/auth/verify-otp \
   -d '{"telefono": "+524421234567", "codigo": "123456"}'
 
 # Salida esperada: 200, token JWT + datos de usuario
+# Nota: El código "123456" funciona solo si ALLOW_TEST_OTP=true en .env
 
 # 3. Subir documentos de identidad (usando el token obtenido)
 curl -X POST http://localhost:3000/api/v1/auth/verify-identity \
@@ -138,9 +140,9 @@ curl -X PATCH http://localhost:3000/api/v1/ofertas/<oferta_id> \
 ### Escenario 3: Finalización y calificación
 
 ```bash
-# 1. Mandadero completa el mandado
+# 1. Solicitante confirma recepción (completa el mandado)
 curl -X PATCH http://localhost:3000/api/v1/mandados/<mandado_id>/estado \
-  -H "Authorization: Bearer <token_mandadero>" \
+  -H "Authorization: Bearer <token_solicitante>" \
   -H "Content-Type: application/json" \
   -d '{"estado": "completado"}'
 
