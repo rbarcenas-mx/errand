@@ -16,8 +16,11 @@ jest.mock('../../src/config/database', () => ({
       findMany: jest.fn(),
       update: jest.fn(),
     },
-    $queryRawUnsafe: jest.fn(),
-    $executeRawUnsafe: jest.fn(),
+    denuncia: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
   },
 }));
 
@@ -195,7 +198,7 @@ describe('Admin Denuncias Flow', () => {
   describe('GET /api/v1/admin/denuncias-pendientes', () => {
     it('should list pending denuncias', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.$queryRawUnsafe.mockResolvedValue([
+      prisma.denuncia.findMany.mockResolvedValue([
         {
           id: 'den-1',
           id_denunciante: 'user-1',
@@ -205,12 +208,9 @@ describe('Admin Denuncias Flow', () => {
           descripcion: 'Me acosó después del mandado',
           estado: 'pendiente',
           creado_en: new Date('2026-06-20').toISOString(),
-          denunciante_nombre: 'Juan Perez',
-          denunciante_telefono: '+524421111111',
-          denunciado_nombre: 'Maria Lopez',
-          denunciado_telefono: '+524422222222',
-          mandado_titulo: 'Comprar tortillas',
-          mandado_estado: 'completado',
+          denunciante: { id: 'user-1', nombre_completo: 'Juan Perez', telefono: '+524421111111' },
+          denunciado: { id: 'user-2', nombre_completo: 'Maria Lopez', telefono: '+524422222222' },
+          mandado: { id: 'mand-1', titulo: 'Comprar tortillas', estado: 'completado' },
         },
       ]);
 
@@ -226,7 +226,7 @@ describe('Admin Denuncias Flow', () => {
 
     it('should return empty list when no pending denuncias', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.$queryRawUnsafe.mockResolvedValue([]);
+      prisma.denuncia.findMany.mockResolvedValue([]);
 
       const res = await request(app)
         .get('/api/v1/admin/denuncias-pendientes')
@@ -251,7 +251,7 @@ describe('Admin Denuncias Flow', () => {
 
     it('should reject if denuncia not found', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.$queryRawUnsafe.mockResolvedValue([]);
+      prisma.denuncia.findUnique.mockResolvedValue(null);
 
       const res = await request(app)
         .post('/api/v1/admin/denuncias/den-not-found/resolver')
@@ -264,11 +264,11 @@ describe('Admin Denuncias Flow', () => {
 
     it('should sanction user when action is rechazar_usuario', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.$queryRawUnsafe.mockResolvedValue([
+      prisma.denuncia.findUnique.mockResolvedValue(
         { id: 'den-1', id_denunciado: 'user-2', estado: 'pendiente' },
-      ]);
+      );
       prisma.usuario.update.mockResolvedValue({ id: 'user-2', estado_verificacion: 'rechazado' });
-      prisma.$executeRawUnsafe.mockResolvedValue(undefined);
+      prisma.denuncia.update.mockResolvedValue({ id: 'den-1', estado: 'aceptada' });
 
       const res = await request(app)
         .post('/api/v1/admin/denuncias/den-1/resolver')
@@ -281,10 +281,10 @@ describe('Admin Denuncias Flow', () => {
 
     it('should dismiss denuncia when action is desestimar', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.$queryRawUnsafe.mockResolvedValue([
+      prisma.denuncia.findUnique.mockResolvedValue(
         { id: 'den-1', id_denunciado: 'user-2', estado: 'pendiente' },
-      ]);
-      prisma.$executeRawUnsafe.mockResolvedValue(undefined);
+      );
+      prisma.denuncia.update.mockResolvedValue({ id: 'den-1', estado: 'rechazada' });
 
       const res = await request(app)
         .post('/api/v1/admin/denuncias/den-1/resolver')
@@ -297,9 +297,9 @@ describe('Admin Denuncias Flow', () => {
 
     it('should reject if denuncia is not pending', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.$queryRawUnsafe.mockResolvedValue([
+      prisma.denuncia.findUnique.mockResolvedValue(
         { id: 'den-1', id_denunciado: 'user-2', estado: 'aceptada' },
-      ]);
+      );
 
       const res = await request(app)
         .post('/api/v1/admin/denuncias/den-1/resolver')
