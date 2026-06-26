@@ -56,7 +56,10 @@ adminRoutes.post('/denuncias/:id/resolver', async (req: Request, res: Response) 
     const { accion } = req.body;
 
     if (!accion || !['rechazar_usuario', 'desestimar'].includes(accion)) {
-      res.status(400).json({ error: 'ACCION_INVALIDA', message: 'La acción debe ser "rechazar_usuario" o "desestimar"' });
+      res.status(400).json({
+        error: 'ACCION_INVALIDA',
+        message: 'La acción debe ser "rechazar_usuario" o "desestimar"',
+      });
       return;
     }
 
@@ -91,7 +94,9 @@ adminRoutes.post('/denuncias/:id/resolver', async (req: Request, res: Response) 
       data: { estado: accion === 'rechazar_usuario' ? 'aceptada' : 'rechazada' },
     });
 
-    res.json({ mensaje: accion === 'rechazar_usuario' ? 'Usuario sancionado' : 'Denuncia desestimada' });
+    res.json({
+      mensaje: accion === 'rechazar_usuario' ? 'Usuario sancionado' : 'Denuncia desestimada',
+    });
   } catch (error) {
     logger.error({ error }, 'Error al resolver denuncia');
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -104,7 +109,9 @@ adminRoutes.post('/verificaciones/:id/revisar', async (req: Request, res: Respon
     const { accion, motivo } = req.body;
 
     if (!accion || !['aprobar', 'rechazar'].includes(accion)) {
-      res.status(400).json({ error: 'ACCION_INVALIDA', message: 'La acción debe ser "aprobar" o "rechazar"' });
+      res
+        .status(400)
+        .json({ error: 'ACCION_INVALIDA', message: 'La acción debe ser "aprobar" o "rechazar"' });
       return;
     }
 

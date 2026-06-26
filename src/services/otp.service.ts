@@ -3,10 +3,7 @@ import { env } from '../config/env';
 import crypto from 'crypto';
 
 function hashOtp(telefono: string, codigo: string): string {
-  return crypto
-    .createHash('sha256')
-    .update(`${telefono}:${codigo}`)
-    .digest('hex');
+  return crypto.createHash('sha256').update(`${telefono}:${codigo}`).digest('hex');
 }
 
 class OtpService {

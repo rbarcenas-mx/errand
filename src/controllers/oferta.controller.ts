@@ -11,13 +11,14 @@ const createOfertaSchema = z.object({
   monto_ofertado: z.number().positive().multipleOf(0.01),
 });
 
-const patchOfertaSchema = z.object({
-  accion: z.enum(['aceptada', 'rechazada']).optional(),
-  estado: z.enum(['aceptada', 'rechazada']).optional(),
-}).refine(
-  (data) => data.accion || data.estado,
-  { message: 'Debe proporcionar "accion" o "estado"' },
-);
+const patchOfertaSchema = z
+  .object({
+    accion: z.enum(['aceptada', 'rechazada']).optional(),
+    estado: z.enum(['aceptada', 'rechazada']).optional(),
+  })
+  .refine((data) => data.accion || data.estado, {
+    message: 'Debe proporcionar "accion" o "estado"',
+  });
 
 export class OfertaController {
   async create(req: Request, res: Response): Promise<void> {
@@ -54,10 +55,7 @@ export class OfertaController {
         return;
       }
 
-      const existing = await ofertaRepository.findByMandadoAndMandadero(
-        mandadoId,
-        req.usuario.sub,
-      );
+      const existing = await ofertaRepository.findByMandadoAndMandadero(mandadoId, req.usuario.sub);
 
       if (existing) {
         res.status(400).json({ error: 'Ya ofertaste en este mandado' });
@@ -72,10 +70,7 @@ export class OfertaController {
 
       try {
         if (mandado.solicitante) {
-          await notificationService.notifyNuevaOferta(
-            mandado.solicitante.telefono,
-            mandado.titulo,
-          );
+          await notificationService.notifyNuevaOferta(mandado.solicitante.telefono, mandado.titulo);
         }
       } catch {
         logger.warn('No se pudo enviar notificación de nueva oferta');

@@ -4,7 +4,11 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../config/database';
 import { env } from '../config/env';
 
-export function generateAccessToken(usuario: { id: string; telefono: string; estado_verificacion: string }): string {
+export function generateAccessToken(usuario: {
+  id: string;
+  telefono: string;
+  estado_verificacion: string;
+}): string {
   return jwt.sign(
     {
       sub: usuario.id,
@@ -47,9 +51,10 @@ export async function revokeRefreshToken(refreshToken: string): Promise<boolean>
   return true;
 }
 
-export async function rotateRefreshToken(
-  refreshToken: string,
-): Promise<{ nuevoToken: string; usuario: { id: string; telefono: string; estado_verificacion: string } } | null> {
+export async function rotateRefreshToken(refreshToken: string): Promise<{
+  nuevoToken: string;
+  usuario: { id: string; telefono: string; estado_verificacion: string };
+} | null> {
   const tokenSha256 = sha256(refreshToken);
   const record = await prisma.refreshToken.findUnique({
     where: { token_sha256: tokenSha256, expira_en: { gt: new Date() } },

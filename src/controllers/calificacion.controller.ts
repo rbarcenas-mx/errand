@@ -73,10 +73,7 @@ export class CalificacionController {
         return;
       }
 
-      const existing = await calificacionRepository.findDuplicada(
-        data.id_mandado,
-        req.usuario.sub,
-      );
+      const existing = await calificacionRepository.findDuplicada(data.id_mandado, req.usuario.sub);
 
       if (existing) {
         res.status(409).json({ error: 'Ya calificaste esta transacción' });

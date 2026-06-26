@@ -1,11 +1,7 @@
 import { prisma } from '../config/database';
 
 export class OfertaRepository {
-  async create(data: {
-    id_mandado: string;
-    id_mandadero: string;
-    monto_ofertado: number;
-  }) {
+  async create(data: { id_mandado: string; id_mandadero: string; monto_ofertado: number }) {
     return prisma.oferta.create({ data });
   }
 

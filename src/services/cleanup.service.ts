@@ -75,7 +75,10 @@ export class CleanupService {
           data: { foto_ine_url: null, foto_vivo_url: null },
         });
 
-        logger.info({ userId: usuario.id, documentos: publicIds.length }, 'Documentos de verificación limpiados');
+        logger.info(
+          { userId: usuario.id, documentos: publicIds.length },
+          'Documentos de verificación limpiados',
+        );
       }
     } catch (error) {
       logger.error({ error }, 'Error en ejecución de limpieza de datos sensibles');

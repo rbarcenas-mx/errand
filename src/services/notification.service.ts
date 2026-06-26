@@ -32,7 +32,10 @@ export class NotificationService {
 
   async notifyNuevaOferta(telefonoSolicitante: string, tituloMandado: string): Promise<void> {
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
-      logger.info({ telefonoSolicitante, tituloMandado }, 'Notificación de nueva oferta (modo dev/test)');
+      logger.info(
+        { telefonoSolicitante, tituloMandado },
+        'Notificación de nueva oferta (modo dev/test)',
+      );
       return;
     }
     try {
@@ -48,7 +51,10 @@ export class NotificationService {
 
   async notifyOfertaAceptada(telefonoMandadero: string, tituloMandado: string): Promise<void> {
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
-      logger.info({ telefonoMandadero, tituloMandado }, 'Notificación de oferta aceptada (modo dev/test)');
+      logger.info(
+        { telefonoMandadero, tituloMandado },
+        'Notificación de oferta aceptada (modo dev/test)',
+      );
       return;
     }
     try {
@@ -62,7 +68,11 @@ export class NotificationService {
     }
   }
 
-  async notifyVerificacionCompleta(userId: string, estado: string, mensajeAdicional?: string): Promise<void> {
+  async notifyVerificacionCompleta(
+    userId: string,
+    estado: string,
+    mensajeAdicional?: string,
+  ): Promise<void> {
     const { prisma } = await import('../config/database');
     const usuario = await prisma.usuario.findUnique({
       where: { id: userId },
@@ -74,16 +84,17 @@ export class NotificationService {
     }
 
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
-      logger.info({ telefono: usuario.telefono, userId, estado, mensajeAdicional }, 'Notificación de verificación (modo dev/test)');
+      logger.info(
+        { telefono: usuario.telefono, userId, estado, mensajeAdicional },
+        'Notificación de verificación (modo dev/test)',
+      );
       return;
     }
     const mensajeBase =
       estado === 'aprobado'
         ? 'Tu verificación de identidad ha sido aprobada. Ya puedes enviar ofertas.'
         : 'Tu verificación de identidad fue rechazada. Puedes reintentar subiendo nuevos documentos.';
-    const mensaje = mensajeAdicional
-      ? `${mensajeBase} Motivo: ${mensajeAdicional}`
-      : mensajeBase;
+    const mensaje = mensajeAdicional ? `${mensajeBase} Motivo: ${mensajeAdicional}` : mensajeBase;
     try {
       await this.getClient().messages.create({
         body: mensaje,

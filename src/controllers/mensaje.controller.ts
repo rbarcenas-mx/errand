@@ -11,7 +11,9 @@ export async function listMensajes(req: Request, res: Response, next: NextFuncti
     const mandado = await mandadoRepository.findByIdConOfertaAceptada(id);
 
     if (!mandado) {
-      return res.status(404).json({ error: 'MANDADO_NO_ENCONTRADO', message: 'Mandado no encontrado' });
+      return res
+        .status(404)
+        .json({ error: 'MANDADO_NO_ENCONTRADO', message: 'Mandado no encontrado' });
     }
 
     const ofertaAceptada = mandado.ofertas[0];
@@ -19,7 +21,9 @@ export async function listMensajes(req: Request, res: Response, next: NextFuncti
     const esMandadero = ofertaAceptada?.id_mandadero === usuarioId;
 
     if (!esSolicitante && !esMandadero) {
-      return res.status(403).json({ error: 'NO_PARTICIPANTE', message: 'No eres participante de este mandado' });
+      return res
+        .status(403)
+        .json({ error: 'NO_PARTICIPANTE', message: 'No eres participante de este mandado' });
     }
 
     const mensajes = await mensajeRepository.findByMandado(id, { antesDe });
@@ -41,31 +45,44 @@ export async function createMensaje(req: Request, res: Response, next: NextFunct
     const { texto } = req.body;
 
     if (!texto || texto.trim().length === 0) {
-      return res.status(400).json({ error: 'MENSAJE_VACIO', message: 'El mensaje no puede estar vacío' });
+      return res
+        .status(400)
+        .json({ error: 'MENSAJE_VACIO', message: 'El mensaje no puede estar vacío' });
     }
     if (texto.length > 1000) {
-      return res.status(422).json({ error: 'TEXTO_EXCEDE_LIMITE', message: 'El texto excede 1000 caracteres' });
+      return res
+        .status(422)
+        .json({ error: 'TEXTO_EXCEDE_LIMITE', message: 'El texto excede 1000 caracteres' });
     }
 
     const mandado = await mandadoRepository.findByIdConOfertaAceptada(id);
 
     if (!mandado) {
-      return res.status(404).json({ error: 'MANDADO_NO_ENCONTRADO', message: 'Mandado no encontrado' });
+      return res
+        .status(404)
+        .json({ error: 'MANDADO_NO_ENCONTRADO', message: 'Mandado no encontrado' });
     }
 
     if (mandado.estado === 'completado' || mandado.estado === 'cancelado') {
-      return res.status(403).json({ error: 'CANAL_CERRADO', message: 'El canal de mensajería está cerrado' });
+      return res
+        .status(403)
+        .json({ error: 'CANAL_CERRADO', message: 'El canal de mensajería está cerrado' });
     }
 
     const ofertaAceptada = mandado.ofertas[0];
     if (!ofertaAceptada) {
-      return res.status(403).json({ error: 'SIN_OFERTA_ACEPTADA', message: 'No hay una oferta aceptada para este mandado' });
+      return res.status(403).json({
+        error: 'SIN_OFERTA_ACEPTADA',
+        message: 'No hay una oferta aceptada para este mandado',
+      });
     }
 
     const esSolicitante = mandado.id_solicitante === usuarioId;
     const esMandadero = ofertaAceptada.id_mandadero === usuarioId;
     if (!esSolicitante && !esMandadero) {
-      return res.status(403).json({ error: 'NO_PARTICIPANTE', message: 'No eres participante de este mandado' });
+      return res
+        .status(403)
+        .json({ error: 'NO_PARTICIPANTE', message: 'No eres participante de este mandado' });
     }
 
     const mensaje = await mensajeRepository.create({

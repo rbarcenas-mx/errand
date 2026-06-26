@@ -1,10 +1,7 @@
 import { prisma } from '../config/database';
 
 export class MensajeRepository {
-  async findByMandado(
-    mandadoId: string,
-    options?: { antesDe?: string; limit?: number },
-  ) {
+  async findByMandado(mandadoId: string, options?: { antesDe?: string; limit?: number }) {
     const where: Record<string, unknown> = { id_mandado: mandadoId };
     if (options?.antesDe) {
       where.creado_en = { lt: new Date(options.antesDe) };
@@ -24,11 +21,7 @@ export class MensajeRepository {
     });
   }
 
-  async create(data: {
-    id_mandado: string;
-    id_remitente: string;
-    texto: string;
-  }) {
+  async create(data: { id_mandado: string; id_remitente: string; texto: string }) {
     return prisma.mensaje.create({
       data,
       select: { id: true, creado_en: true },

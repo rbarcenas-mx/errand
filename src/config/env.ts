@@ -25,7 +25,7 @@ export const env = {
   CLOUDINARY_API_SECRET: requiredEnv('CLOUDINARY_API_SECRET'),
   ALLOW_TEST_OTP: process.env.ALLOW_TEST_OTP === 'true',
   VERIFICACION_MANUAL: process.env.VERIFICACION_MANUAL === 'true',
-  ADMIN_TELEFONO: process.env.ADMIN_TELEFONO || '',
+  ADMIN_TELEFONO: requiredEnv('ADMIN_TELEFONO'),
   SENTRY_DSN: process.env.SENTRY_DSN || '',
 };
 
@@ -34,5 +34,7 @@ if (env.JWT_SECRET === 'dev-secret-change-in-production' && env.NODE_ENV === 'pr
 }
 
 if (env.ALLOW_TEST_OTP && env.NODE_ENV === 'production') {
-  throw new Error('ALLOW_TEST_OTP no debe estar activo en producción — permite codigos OTP de prueba (123456)');
+  throw new Error(
+    'ALLOW_TEST_OTP no debe estar activo en producción — permite codigos OTP de prueba (123456)',
+  );
 }

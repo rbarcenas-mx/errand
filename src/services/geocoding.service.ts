@@ -30,7 +30,7 @@ export class GeocodingService {
         return null;
       }
 
-      const data = await response.json() as NominatimResult[];
+      const data = (await response.json()) as NominatimResult[];
 
       if (!data || data.length === 0) {
         logger.warn({ direccion }, 'Dirección no encontrada por geocoder');
@@ -63,7 +63,7 @@ export class GeocodingService {
         return null;
       }
 
-      const data = await response.json() as NominatimResult;
+      const data = (await response.json()) as NominatimResult;
 
       if (!data || !data.display_name) {
         return null;

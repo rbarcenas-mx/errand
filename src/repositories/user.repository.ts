@@ -9,11 +9,7 @@ export class UserRepository {
     return prisma.usuario.findUnique({ where: { id } });
   }
 
-  async create(data: {
-    nombre_completo: string;
-    telefono: string;
-    correo_electronico?: string;
-  }) {
+  async create(data: { nombre_completo: string; telefono: string; correo_electronico?: string }) {
     return prisma.usuario.create({ data });
   }
 

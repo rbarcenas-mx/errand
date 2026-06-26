@@ -27,10 +27,14 @@ export class VerificationService {
     try {
       resultado = await this.analizarDocumentos(fotoIneUrl, fotoVivoUrl);
     } catch (error) {
-      logger.error({ userId, error }, 'Error en servicio de verificación externo, degradando a verificación manual');
+      logger.error(
+        { userId, error },
+        'Error en servicio de verificación externo, degradando a verificación manual',
+      );
       resultado = {
         estado: 'pendiente_manual',
-        mensaje: 'No pudimos verificar tus documentos automáticamente. Un agente los revisará pronto.',
+        mensaje:
+          'No pudimos verificar tus documentos automáticamente. Un agente los revisará pronto.',
       };
     }
 
@@ -69,9 +73,10 @@ export class VerificationService {
       },
     });
 
-    const mensaje = nuevoEstado === 'aprobado'
-      ? 'Tu verificación de identidad ha sido aprobada'
-      : `Tu verificación de identidad ha sido rechazada. ${motivo || 'Los documentos no cumplen con los requisitos.'}. Puedes intentar de nuevo subiendo nuevos documentos.`;
+    const mensaje =
+      nuevoEstado === 'aprobado'
+        ? 'Tu verificación de identidad ha sido aprobada'
+        : `Tu verificación de identidad ha sido rechazada. ${motivo || 'Los documentos no cumplen con los requisitos.'}. Puedes intentar de nuevo subiendo nuevos documentos.`;
 
     await notificationService.notifyVerificacionCompleta(userId, nuevoEstado, mensaje);
 
@@ -112,7 +117,8 @@ export class VerificationService {
     if (!coinciden) {
       return {
         estado: 'rechazado',
-        mensaje: 'La foto del INE no coincide con tu selfie. Verifica que ambos documentos sean tuyos.',
+        mensaje:
+          'La foto del INE no coincide con tu selfie. Verifica que ambos documentos sean tuyos.',
       };
     }
 
@@ -165,7 +171,10 @@ export class VerificationService {
         });
       }
     } catch (error) {
-      logger.warn({ error }, 'Error al verificar INE en Cloudinary, se procede con validación básica');
+      logger.warn(
+        { error },
+        'Error al verificar INE en Cloudinary, se procede con validación básica',
+      );
     }
 
     const namePattern = /(INE|credencial|electoral|identificacion|IFE)/i;

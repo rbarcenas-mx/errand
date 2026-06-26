@@ -12,9 +12,7 @@ mandadoRoutes.get('/:id', authenticate, (req, res) => mandadoController.getById(
 mandadoRoutes.patch('/:id/estado', authenticate, (req, res) =>
   mandadoController.updateEstado(req, res),
 );
-mandadoRoutes.post('/:id/ofertas', authenticate, (req, res) =>
-  ofertaController.create(req, res),
-);
+mandadoRoutes.post('/:id/ofertas', authenticate, (req, res) => ofertaController.create(req, res));
 mandadoRoutes.get('/:id/ofertas', authenticate, (req, res) =>
   ofertaController.listByMandado(req, res),
 );

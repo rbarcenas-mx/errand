@@ -255,11 +255,11 @@ export class AuthController {
         fotoVivoUrl,
       );
 
-      verificationService.processVerification(req.usuario.sub, fotoIneUrl, fotoVivoUrl).catch(
-        (err) => {
+      verificationService
+        .processVerification(req.usuario.sub, fotoIneUrl, fotoVivoUrl)
+        .catch((err) => {
           logger.error({ err }, 'Error en verificación asíncrona');
-        },
-      );
+        });
 
       res.status(200).json({
         estado: 'pendiente',

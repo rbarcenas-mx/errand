@@ -53,11 +53,40 @@ export class MandadoService {
     }
   }
 
-  async acceptOferta(ofertaId: string, mandadoId: string): Promise<{
+  async acceptOferta(
+    ofertaId: string,
+    mandadoId: string,
+  ): Promise<{
     contacto_mandadero: { nombre_completo: string; telefono: string } | null;
     contacto_solicitante: { nombre_completo: string; telefono: string } | null;
   }> {
     await prisma.$transaction(async (tx) => {
+      const oferta = await tx.oferta.findUnique({
+        where: { id: ofertaId },
+        select: {
+          id_mandado: true,
+          estado: true,
+          id_mandadero: true,
+          mandado: {
+            select: {
+              id_solicitante: true,
+            },
+          },
+        },
+      });
+
+      if (!oferta) {
+        throw new Error('Oferta no encontrada');
+      }
+
+      if (oferta.id_mandado !== mandadoId) {
+        throw new Error('La oferta no pertenece al mandado indicado');
+      }
+
+      if (oferta.estado !== 'pendiente') {
+        throw new Error('La oferta ya fue respondida');
+      }
+
       await tx.oferta.update({
         where: { id: ofertaId },
         data: { estado: 'aceptada' },
@@ -75,6 +104,14 @@ export class MandadoService {
       await tx.mandado.update({
         where: { id: mandadoId },
         data: { estado: 'en_progreso' },
+      });
+
+      await tx.mensaje.create({
+        data: {
+          id_mandado: mandadoId,
+          id_remitente: oferta.mandado.id_solicitante,
+          texto: 'Canal de mensajería abierto. Oferta aceptada.',
+        },
       });
     });
 

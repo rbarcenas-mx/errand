@@ -15,6 +15,4 @@ authRoutes.post('/verify-identity', authenticate, uploadIdentityDocs, (req, res)
 authRoutes.get('/verification-status', authenticate, (req, res) =>
   authController.verificationStatus(req, res),
 );
-authRoutes.delete('/cuenta', authenticate, (req, res) =>
-  authController.deleteAccount(req, res),
-);
+authRoutes.delete('/cuenta', authenticate, (req, res) => authController.deleteAccount(req, res));
