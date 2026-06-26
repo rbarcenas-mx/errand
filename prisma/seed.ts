@@ -5,11 +5,14 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Sembrando datos de prueba...');
 
-  await prisma.calificacion.deleteMany();
-  await prisma.oferta.deleteMany();
-  await prisma.mandado.deleteMany();
-  await prisma.refreshToken.deleteMany();
-  await prisma.usuario.deleteMany();
+  await prisma.$executeRawUnsafe('DELETE FROM denuncias');
+  await prisma.$executeRawUnsafe('DELETE FROM calificaciones');
+  await prisma.$executeRawUnsafe('DELETE FROM mensajes');
+  await prisma.$executeRawUnsafe('DELETE FROM ofertas');
+  await prisma.$executeRawUnsafe('DELETE FROM mandados');
+  await prisma.$executeRawUnsafe('DELETE FROM refresh_tokens');
+  await prisma.$executeRawUnsafe('DELETE FROM otp_codes');
+  await prisma.$executeRawUnsafe('DELETE FROM usuarios');
 
   const usuario1 = await prisma.usuario.create({
     data: {
