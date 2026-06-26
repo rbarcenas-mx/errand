@@ -24,6 +24,7 @@
 - [x] T015 [US1] Implement GET `/api/mandados` with spatial filtering in `src/controllers/mandado.controller.ts`
 - [x] T016 [US1] Create Integration Tests for Mandado lifecycle in `tests/integration/mandado.test.ts`
 - [x] T016c [US1] Integrate geocoding service (OpenStreetMap/Nominatim) to normalize addresses in `src/services/geocoding.service.ts`
+- [x] T016d [US1] Implementar flujo de confirmacion de ubicacion: al crear mandado, devolver direccion normalizada y solicitar confirmacion antes de publicar
 
 ## Phase 4b: Auth & Verification Tests
 - [x] T016a Create Integration Tests for Auth (register + verify-otp) in `tests/integration/auth.test.ts`
@@ -61,6 +62,7 @@
 - [x] T043f Crear middleware `requireAdmin` en `src/middleware/auth.middleware.ts`
 - [x] T043g Pruebas de integracion para flujo de verificacion manual
 - [x] T043h Definir SLA de 12 horas habiles para revision manual con renotificacion automatica al equipo admin
+- [x] T043j Implementar scheduler de renotificacion (node-cron) que verifica verificaciones pendientes y renotifica al equipo admin si se supera el SLA
 - [x] T043i Implementar notificacion al usuario cuando admin aprueba o rechaza documentos en `src/services/verification.service.ts` (revisarVerificacion llama a notifyVerificacionCompleta)
 
 ## Phase 6c: Limpieza de Datos Sensibles
@@ -75,14 +77,15 @@
 - [x] T050 Crear `src/routes/denuncia.routes.ts` y montar en `app.ts`
 - [x] T051 Agregar rutas admin para listar y resolver denuncias en `src/routes/admin.routes.ts`
 - [x] T052 Implementar logica de sancion en `POST /admin/denuncias/:id/resolver` que cambie `estado_verificacion` del denunciado a `rechazado` al resolver con accion `rechazar_usuario`
+- [x] T052b Crear Integration Tests para el flujo de denuncias en `tests/integration/denuncia.test.ts`
 
 ## Phase 7: Production & Deployment
-- [ ] T031 Configure Railway.app production environment and env vars in `railway.json`
+- [x] T031 Configure Railway.app production environment and env vars in `railway.json`
 - [x] T032 Set up Sentry error monitoring in `src/config/sentry.ts`
 - [x] T033 Implement data retention policy (auto-delete verification images after 90d) in `src/jobs/cleanup.job.ts`
 - [x] T034 Implement account deletion endpoint (DELETE /api/auth/cuenta) in `src/controllers/auth.controller.ts`
-- [ ] T035 Set up automated DB migrations on deploy in `package.json` scripts
-- [ ] T036 Smoke tests for production deployment in `tests/smoke/production.test.ts`
+- [x] T035 Set up automated DB migrations on deploy in `package.json` scripts
+- [x] T036 Smoke tests for production deployment in `tests/smoke/production.test.ts`
 
 ## Phase 8: [US4] Mensajería Interna
 - [x] T037 [US4] Create Mensaje model and migration in `prisma/schema.prisma`

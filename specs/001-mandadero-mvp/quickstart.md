@@ -38,6 +38,29 @@ ALLOW_TEST_OTP=true  # SOLO DESARROLLO - nunca usar en produccion
 > En produccion, la aplicacion falla al iniciar si esta variable esta activa.
 > Usar `ALLOW_TEST_OTP=false` en `.env.production`.
 
+### Entorno de QA (`.env.qa`)
+
+Para pruebas automatizadas existe `.env.qa` que incluye Twilio/Cloudinary mock y valores de rate limit adecuados para flujos multi-usuario:
+
+| Variable | Valor QA | Propósito |
+|---|---|---|
+| `TWILIO_ACCOUNT_SID` | `MOCK_SID` | Evita llamadas reales a Twilio |
+| `CLOUDINARY_CLOUD_NAME` | `mock_cloud` | Evita subidas reales a Cloudinary |
+| `ALLOW_TEST_OTP` | `true` | OTP fijo `123456` para pruebas |
+| `API_RATE_LIMIT_MAX` | `1000` | Sin restricciones para flujos con 10+ usuarios |
+| `AUTH_RATE_LIMIT_MAX` | `50` | Suficiente para registrar múltiples usuarios |
+| `VERIFICACION_MANUAL` | `false` | Verificación automática (mock aprueba) |
+
+### Ejecutar planes de QA
+
+```bash
+# Ejecutar plan de infraestructura (Docker, migraciones, servidor)
+QA_PLAN_FILE=qa/003_plan.md WORKDIR=. python3 /tmp/opencode/qa_execute/run.py
+
+# Ejecutar plan de flujo (registro, mandados, ofertas, mensajería, calificaciones, denuncias)
+QA_PLAN_FILE=qa/003_flow_plan.md WORKDIR=. python3 /tmp/opencode/qa_execute/run.py
+```
+
 ```bash
 # Ejecutar migraciones de base de datos
 npm run db:migrate

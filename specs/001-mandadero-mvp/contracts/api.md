@@ -13,6 +13,25 @@ Formato: REST sobre HTTP/JSON. Base URL: `/api/v1`
   - `POST /api/v1/auth/refresh` — obtener nuevo access token con refresh token válido.
   - `POST /api/v1/auth/logout` — revocar refresh token activo.
 
+### Formato de errores
+Todas las respuestas de error siguen el formato:
+```json
+{ "error": "Mensaje descriptivo del error en español" }
+```
+Códigos de estado usados: `400` (solicitud inválida), `401` (no autenticado), `403` (sin permisos), `404` (recurso no encontrado), `409` (conflicto, ej. teléfono duplicado), `422` (datos inválidos), `429` (demasiadas solicitudes).
+
+### Rate limiting
+Los endpoints están protegidos por rate limiting. Las respuestas incluyen los headers estándar:
+- `RateLimit-Limit` — cuota máxima por ventana
+- `RateLimit-Remaining` — solicitudes restantes en la ventana actual
+- `RateLimit-Reset` — timestamp Unix del reinicio de la ventana
+
+Las cuotas por defecto:
+- API general (`/api/v1/*`): 100 requests por ventana de 15 minutos (configurable vía `API_RATE_LIMIT_MAX` y `API_RATE_LIMIT_WINDOW_MS`)
+- Auth (`/api/v1/auth/register`, `/api/v1/auth/verify-otp`): 5 requests por ventana de 15 minutos (configurable vía `AUTH_RATE_LIMIT_MAX`)
+
+Tras superar la cuota, el servidor responde con `429 Too Many Requests` y el body `{"error": "Demasiadas solicitudes, intenta de nuevo más tarde"} ASAP.
+
 ---
 
 ## Autenticación

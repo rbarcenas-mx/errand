@@ -9,10 +9,10 @@
 - **Frontend**: React Native (expo-managed recomendado para MVP)
 - **Backend**: Node.js + Express
 - **Base de datos**: PostgreSQL + PostGIS
-- **Geocodificación**: Nominatim (OpenStreetMap) para normalización de direcciones y búsqueda inversa. Precisión suficiente para zona metropolitana de Querétaro en MVP. Post-MVP: migrar a Google Places API para autocompletado y mayor precisión.
+- **Geocodificación**: Nominatim (OpenStreetMap) para normalización de direcciones y búsqueda inversa. Implementar caché de resultados en memoria para evitar solicitudes repetidas y respetar el límite de 1 solicitud/segundo. User-Agent configurado por política de uso. Precisión suficiente para zona metropolitana de Querétaro en MVP. Post-MVP: migrar a Google Places API para autocompletado y mayor precisión.
 - **Notificaciones**: Twilio (SMS) limitado exclusivamente a registro, autenticación y recuperación de acceso. Mensajería del flujo de mandados (coordinación Solicitante-Mandadero) mediante mensajería interna en base de datos. Firebase Cloud Messaging (FCM) para notificaciones push en segundo plano. Las notificaciones in-app (polling) funcionan como fallback cuando FCM no está disponible.
 - **Almacenamiento**: Cloudinary
-- **Autenticación**: JWT (Access Token 1h + Refresh Token 30 días con rotación) + OTP vía SMS
+- **Autenticación**: JWT (Access Token 1h + Refresh Token 30 días con rotación) + OTP vía SMS con endpoint de reenvío (`POST /api/v1/auth/resend-otp`) para casos de no recepción o expiración
 - **Verificación identidad**: OCR + selfie (servicio cloud)
 - **CI/CD**: GitHub Actions
 - **Despliegue**: Railway.app o Fly.io
@@ -23,7 +23,7 @@
 |---|---|
 | Calidad de Código y Limpieza | ESLint + Prettier + TypeScript en setup de proyecto |
 | Seguridad Primero | JWT con refresh tokens, validación de inputs, OTP en registro, manejo de datos sensibles |
-| Pruebas Rigurosas | Suites por endpoint (contract tests + integration tests planificados) |
+| Pruebas Rigurosas | Suites por endpoint (contract tests + integration tests) + pipeline QA automatizado (`qa.prepare` + `qa.execute`) que genera y ejecuta planes de infraestructura y flujo multi-usuario con datos realistas |
 | UX Consistente | Diseño de API coherente, respuestas unificadas, validaciones claras |
 | Rendimiento y Escalabilidad | PostgreSQL con índices geoespaciales, paginación en listados |
 
@@ -50,13 +50,14 @@
 6. Implementar flujo de Refresh Token (login, refresh, logout con revocación)
 7. CI/CD básico (lint + test en PR)
 8. Rate limiting por IP y por número de teléfono en endpoints de registro y verificación OTP para mitigar ataques de agotamiento de saldo (SMS Bombing)
+9. Crear `.env.qa` como archivo de entorno para QA con Twilio/Cloudinary mock y `ALLOW_TEST_OTP=true`. Pipeline QA automatizado (`qa.prepare` + `qa.execute`) para validación de infraestructura y flujo multi-usuario.
 
 #### Sprint 2 — Mandados y Ofertas
 1. CRUD de mandados con búsqueda geoespacial
    - En listado: exponer solo `distancia_km` (calculada desde ubicación del usuario) y colonia/sector como dirección general
    - En detalle (`GET /:id`): exponer coordenadas exactas solo para usuarios con `estado_verificacion = aprobado` o `pendiente_manual`
 2. Envío y gestión de ofertas
-3. Flujo de aceptación/rechazo de ofertas (revelar contacto de ambas partes al aceptar, implementado con transacción ACID en `mandado.service.ts`)
+3. Flujo de aceptación/rechazo de ofertas (solicitar confirmación explícita de consentimiento del solicitante antes de revelar contacto de ambas partes, implementado con transacción ACID en `mandado.service.ts`)
 4. Cambio de estados de mandado (incluyendo cancelación por Solicitante y expiración automática)
 5. Lógica de expiración de ofertas no aceptadas
 6. Notificaciones de ofertas in-app (no SMS) — Twilio solo para auth
@@ -69,7 +70,7 @@
 3. Validación de caso de borde (INE rechazado + flujo de reintento)
 4. Pruebas de integración completas
 5. Documentación técnica básica
-6. Worker de limpieza de datos sensibles (cleanup.service.ts): eliminar fotos de verificación 90 días después de aprobación o 30 días después de rechazo
+6. Worker de limpieza de datos sensibles (cleanup.service.ts): eliminar fotos de verificación 90 días después de aprobación o 30 días después de rechazo. Las tareas asíncronas (expiraciones, limpieza) se ejecutan mediante cron jobs gestionados por node-cron en el mismo proceso del servidor. Para MVP no se requiere cola de mensajes externa.
 
 #### Sprint 4 — Mensajería Interna (US4)
 1. Implementar entidad Mensaje y migración en Prisma
