@@ -184,6 +184,15 @@ describe('Offer Flow API', () => {
       prisma.$transaction.mockImplementation(async (fn: Function) => {
         const tx = {
           oferta: {
+            findUnique: jest.fn().mockResolvedValue({
+              id: 'oferta-1',
+              id_mandado: 'mandado-1',
+              estado: 'pendiente',
+              id_mandadero: 'user-mandadero',
+              mandado: {
+                id_solicitante: 'user-solicitante',
+              },
+            }),
             update: jest.fn().mockResolvedValue({ id: 'oferta-1', estado: 'aceptada' }),
             updateMany: jest.fn(),
           },
