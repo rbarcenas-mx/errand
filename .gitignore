@@ -12,3 +12,13 @@ Thumbs.db
 .vscode/
 .idea/
 coverage/
+
+# Session logs
+SESSION_LOG.md
+
+# Audit artifacts
+audit.md
+audit/
+
+# QA backups
+qa/backup/
