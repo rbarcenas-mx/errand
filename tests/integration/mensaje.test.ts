@@ -64,7 +64,7 @@ beforeEach(async () => {
       descripcion: 'Para probar chat',
       tipo: 'compra',
       ubicacion_recogida: { lat: 20.588, lng: -100.389, direccion: 'Av. Principal 123' },
-      ubicacion_entrega: { lat: 20.590, lng: -100.392, direccion: 'Calle Secundaria 456' },
+      ubicacion_entrega: { lat: 20.59, lng: -100.392, direccion: 'Calle Secundaria 456' },
       fecha_hora_limite: new Date(Date.now() + 86400000).toISOString(),
     });
   mandadoId = mandado.body.id;
@@ -99,8 +99,7 @@ describe('Mensajería Interna - GET /api/v1/mandados/:id/mensajes', () => {
   });
 
   it('debe devolver 401 sin token', async () => {
-    const res = await request(app)
-      .get(`/api/v1/mandados/${mandadoId}/mensajes`);
+    const res = await request(app).get(`/api/v1/mandados/${mandadoId}/mensajes`);
     expect(res.status).toBe(401);
   });
 

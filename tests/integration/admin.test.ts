@@ -264,9 +264,11 @@ describe('Admin Denuncias Flow', () => {
 
     it('should sanction user when action is rechazar_usuario', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.denuncia.findUnique.mockResolvedValue(
-        { id: 'den-1', id_denunciado: 'user-2', estado: 'pendiente' },
-      );
+      prisma.denuncia.findUnique.mockResolvedValue({
+        id: 'den-1',
+        id_denunciado: 'user-2',
+        estado: 'pendiente',
+      });
       prisma.usuario.update.mockResolvedValue({ id: 'user-2', estado_verificacion: 'rechazado' });
       prisma.denuncia.update.mockResolvedValue({ id: 'den-1', estado: 'aceptada' });
 
@@ -281,9 +283,11 @@ describe('Admin Denuncias Flow', () => {
 
     it('should dismiss denuncia when action is desestimar', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.denuncia.findUnique.mockResolvedValue(
-        { id: 'den-1', id_denunciado: 'user-2', estado: 'pendiente' },
-      );
+      prisma.denuncia.findUnique.mockResolvedValue({
+        id: 'den-1',
+        id_denunciado: 'user-2',
+        estado: 'pendiente',
+      });
       prisma.denuncia.update.mockResolvedValue({ id: 'den-1', estado: 'rechazada' });
 
       const res = await request(app)
@@ -297,9 +301,11 @@ describe('Admin Denuncias Flow', () => {
 
     it('should reject if denuncia is not pending', async () => {
       const { prisma } = require('../../src/config/database');
-      prisma.denuncia.findUnique.mockResolvedValue(
-        { id: 'den-1', id_denunciado: 'user-2', estado: 'aceptada' },
-      );
+      prisma.denuncia.findUnique.mockResolvedValue({
+        id: 'den-1',
+        id_denunciado: 'user-2',
+        estado: 'aceptada',
+      });
 
       const res = await request(app)
         .post('/api/v1/admin/denuncias/den-1/resolver')

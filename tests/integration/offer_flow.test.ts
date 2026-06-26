@@ -190,6 +190,9 @@ describe('Offer Flow API', () => {
           mandado: {
             update: jest.fn(),
           },
+          mensaje: {
+            create: jest.fn().mockResolvedValue({ id: 'msg-1' }),
+          },
         };
         return fn(tx);
       });
