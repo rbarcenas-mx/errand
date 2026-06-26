@@ -4,8 +4,9 @@ export class DenunciaRepository {
   async create(data: {
     id_denunciante: string;
     id_denunciado: string;
-    id_mandado?: string;
+    id_mandado: string;
     motivo: string;
+    descripcion: string;
   }) {
     return prisma.denuncia.create({ data });
   }
@@ -15,8 +16,8 @@ export class DenunciaRepository {
       where: { estado: 'pendiente' },
       orderBy: { creado_en: 'asc' },
       include: {
-        denunciante: { select: { id: true, nombre: true, telefono: true } },
-        denunciado: { select: { id: true, nombre: true, telefono: true } },
+        denunciante: { select: { id: true, nombre_completo: true, telefono: true } },
+        denunciado: { select: { id: true, nombre_completo: true, telefono: true } },
         mandado: { select: { id: true, titulo: true } },
       },
     });

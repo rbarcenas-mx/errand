@@ -109,7 +109,7 @@ export class MandadoService {
       await tx.mensaje.create({
         data: {
           id_mandado: mandadoId,
-          id_remitente: oferta.mandado.id_solicitante,
+          id_remitente: oferta.mandado.id_solicitante!,
           texto: 'Canal de mensajería abierto. Oferta aceptada.',
         },
       });
