@@ -30,6 +30,30 @@ jest.mock('../../src/services/notification.service', () => ({
   },
 }));
 
+function mockTransaction(overrides: {
+  oferta?: Partial<{ id: string; id_mandado: string; estado: string; id_mandadero: string; mandado: { id_solicitante: string } }>;
+  ofertaUpdate?: { id: string; estado: string };
+} = {}): { tx: Record<string, Record<string, jest.Mock>>; lastTx: Record<string, Record<string, jest.Mock>> } {
+  const ofertaDefaults = { id: 'oferta-1', id_mandado: 'mandado-1', estado: 'pendiente', id_mandadero: 'user-mandadero', mandado: { id_solicitante: 'user-solicitante' } };
+  const ofertaData = { ...ofertaDefaults, ...overrides.oferta };
+  const ofertaUpdateData = overrides.ofertaUpdate ?? { id: 'oferta-1', estado: 'aceptada' };
+  const lastTx: Record<string, Record<string, jest.Mock>> = {} as Record<string, Record<string, jest.Mock>>;
+  const tx = {
+    oferta: {
+      findUnique: jest.fn().mockResolvedValue(ofertaData),
+      update: jest.fn().mockResolvedValue(ofertaUpdateData),
+      updateMany: jest.fn(),
+    },
+    mandado: { update: jest.fn() },
+    mensaje: { create: jest.fn().mockResolvedValue({ id: 'msg-1' }) },
+  };
+  Object.assign(lastTx, tx);
+
+  const { prisma } = require('../../src/config/database');
+  prisma.$transaction.mockImplementation(async (fn: Function) => fn(tx));
+  return { tx, lastTx };
+}
+
 describe('Offer Flow API', () => {
   const tokenSolicitante = generateTestToken('user-solicitante', 'aprobado');
   const tokenMandadero = generateTestToken('user-mandadero', 'aprobado');
@@ -181,30 +205,8 @@ describe('Offer Flow API', () => {
           },
         });
       });
-      prisma.$transaction.mockImplementation(async (fn: Function) => {
-        const tx = {
-          oferta: {
-            findUnique: jest.fn().mockResolvedValue({
-              id: 'oferta-1',
-              id_mandado: 'mandado-1',
-              estado: 'pendiente',
-              id_mandadero: 'user-mandadero',
-              mandado: {
-                id_solicitante: 'user-solicitante',
-              },
-            }),
-            update: jest.fn().mockResolvedValue({ id: 'oferta-1', estado: 'aceptada' }),
-            updateMany: jest.fn(),
-          },
-          mandado: {
-            update: jest.fn(),
-          },
-          mensaje: {
-            create: jest.fn().mockResolvedValue({ id: 'msg-1' }),
-          },
-        };
-        return fn(tx);
-      });
+
+      const { lastTx } = mockTransaction();
 
       const res = await request(app)
         .patch('/api/v1/ofertas/oferta-1')
@@ -217,6 +219,65 @@ describe('Offer Flow API', () => {
       expect(res.body.contacto_solicitante).toBeDefined();
       expect(res.body.contacto_solicitante.telefono).toBeDefined();
       expect(res.body.contacto_solicitante.nombre_completo).toBe('Juan Solicitante');
+
+      expect(lastTx.oferta.findUnique).toHaveBeenCalledWith({
+        where: { id: 'oferta-1' },
+        select: {
+          id_mandado: true,
+          estado: true,
+          id_mandadero: true,
+          mandado: { select: { id_solicitante: true } },
+        },
+      });
+      expect(lastTx.mensaje.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            id_oferta: 'oferta-1',
+          }),
+        }),
+      );
+    });
+
+    it('should return 404 when oferta not found', async () => {
+      const { prisma } = require('../../src/config/database');
+      prisma.oferta.findUnique.mockResolvedValue(null);
+
+      const res = await request(app)
+        .patch('/api/v1/ofertas/oferta-inexistente')
+        .set('Authorization', `Bearer ${tokenSolicitante}`)
+        .send({ accion: 'aceptada' });
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should reject when oferta does not belong to the mandado', async () => {
+      const { prisma } = require('../../src/config/database');
+      prisma.oferta.findUnique.mockResolvedValue({
+        id: 'oferta-1',
+        id_mandado: 'mandado-otro',
+        estado: 'pendiente',
+        mandado: { id_solicitante: 'user-solicitante' },
+      });
+
+      mockTransaction({ oferta: { id_mandado: 'mandado-otro' } });
+
+      const res = await request(app)
+        .patch('/api/v1/ofertas/oferta-1')
+        .set('Authorization', `Bearer ${tokenSolicitante}`)
+        .send({ accion: 'aceptada' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject already responded offer', async () => {
+      mockTransaction({ oferta: { estado: 'aceptada' } });
+
+      const res = await request(app)
+        .patch('/api/v1/ofertas/oferta-1')
+        .set('Authorization', `Bearer ${tokenSolicitante}`)
+        .send({ accion: 'aceptada' });
+
+      expect(res.status).toBe(409);
     });
 
     it('should reject an offer', async () => {

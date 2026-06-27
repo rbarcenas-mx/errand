@@ -1,5 +1,8 @@
 import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
+import { NotFoundError, ConflictError, ValidationError } from '../utils/errors';
+
+const SISTEMA_MENSAJE_ACEPTACION = 'Canal de mensajería abierto. Oferta aceptada.';
 
 export class MandadoService {
   async revealContactInfo(ofertaId: string): Promise<{
@@ -56,6 +59,7 @@ export class MandadoService {
   async acceptOferta(
     ofertaId: string,
     mandadoId: string,
+    solicitanteId: string,
   ): Promise<{
     contacto_mandadero: { nombre_completo: string; telefono: string } | null;
     contacto_solicitante: { nombre_completo: string; telefono: string } | null;
@@ -76,15 +80,19 @@ export class MandadoService {
       });
 
       if (!oferta) {
-        throw new Error('Oferta no encontrada');
+        throw new NotFoundError('Oferta no encontrada');
+      }
+
+      if (oferta.mandado.id_solicitante !== solicitanteId) {
+        throw new ValidationError('No eres el solicitante de este mandado');
       }
 
       if (oferta.id_mandado !== mandadoId) {
-        throw new Error('La oferta no pertenece al mandado indicado');
+        throw new ValidationError('La oferta no pertenece al mandado indicado');
       }
 
       if (oferta.estado !== 'pendiente') {
-        throw new Error('La oferta ya fue respondida');
+        throw new ConflictError('La oferta ya fue respondida');
       }
 
       await tx.oferta.update({
@@ -109,8 +117,8 @@ export class MandadoService {
       await tx.mensaje.create({
         data: {
           id_mandado: mandadoId,
-          id_remitente: oferta.mandado.id_solicitante!,
-          texto: 'Canal de mensajería abierto. Oferta aceptada.',
+          id_remitente: oferta.mandado.id_solicitante,
+          texto: SISTEMA_MENSAJE_ACEPTACION,
         },
       });
     });

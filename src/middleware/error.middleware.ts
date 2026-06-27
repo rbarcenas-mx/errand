@@ -6,24 +6,32 @@ export interface AppError extends Error {
   details?: object;
 }
 
+const ERROR_STATUS_MAP: Record<string, number> = {
+  NotFoundError: 404,
+  ConflictError: 409,
+  ValidationError: 400,
+};
+
 export function errorHandler(
   err: AppError,
   _req: Request,
   res: Response,
   _next: NextFunction,
 ): void {
-  const statusCode = err.statusCode || 500;
+  const statusCode = err.statusCode || ERROR_STATUS_MAP[err.name] || 500;
   const message = err.message || 'Error interno del servidor';
 
-  logger.error(
-    {
-      statusCode,
-      message,
-      details: err.details,
-      stack: err.stack,
-    },
-    'Error no controlado',
-  );
+  if (statusCode >= 500) {
+    logger.error(
+      {
+        statusCode,
+        message,
+        details: err.details,
+        stack: err.stack,
+      },
+      'Error no controlado',
+    );
+  }
 
   res.status(statusCode).json({
     error: message,

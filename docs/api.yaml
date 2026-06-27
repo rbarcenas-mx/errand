@@ -398,9 +398,13 @@ paths:
                   enum: [aceptada, rechazada]
       responses:
         '200':
-          description: Oferta actualizada
+          description: Oferta actualizada con contactos revelados (solo aceptada)
+        '400':
+          description: La oferta no pertenece al mandado indicado o no eres el solicitante
         '403':
           description: No autorizado
+        '404':
+          description: Oferta no encontrada
         '409':
           description: Oferta ya no está pendiente
 

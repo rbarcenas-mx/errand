@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { mandadoRepository } from '../repositories/mandado.repository';
 import { ofertaRepository } from '../repositories/oferta.repository';
@@ -128,7 +128,7 @@ export class OfertaController {
     }
   }
 
-  async patch(req: Request, res: Response): Promise<void> {
+  async patch(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.usuario) {
         res.status(401).json({ error: 'Autenticación requerida' });
@@ -171,6 +171,7 @@ export class OfertaController {
       const { contacto_mandadero, contacto_solicitante } = await mandadoService.acceptOferta(
         ofertaId,
         oferta.id_mandado,
+        req.usuario.sub,
       );
 
       try {
@@ -192,8 +193,7 @@ export class OfertaController {
         res.status(422).json({ error: 'Datos inválidos', detalles: error.errors });
         return;
       }
-      logger.error({ error }, 'Error al gestionar oferta');
-      res.status(500).json({ error: 'Error interno del servidor' });
+      next(error);
     }
   }
 }

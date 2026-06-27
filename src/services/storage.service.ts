@@ -16,7 +16,7 @@ export class StorageService {
 
   async uploadImage(filePath: string, folder: string): Promise<string> {
     this.initCloudinary();
-    if (env.CLOUDINARY_CLOUD_NAME === 'mock_cloud' || env.CLOUDINARY_API_KEY === 'mock_key') {
+    if (env.CLOUDINARY_MOCK_ENABLED) {
       return `https://res.cloudinary.com/mock/upload/v1/${folder}/mock_${Date.now()}.jpg`;
     }
     const result = await cloudinary.uploader.upload(filePath, {

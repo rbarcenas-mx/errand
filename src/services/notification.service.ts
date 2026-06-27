@@ -2,6 +2,16 @@ import twilio from 'twilio';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 
+function maskTelefono(telefono: string): string {
+  if (telefono.length <= 4) return telefono;
+  return '*'.repeat(telefono.length - 4) + telefono.slice(-4);
+}
+
+function maskUserId(userId: string): string {
+  if (userId.length <= 8) return userId;
+  return userId.slice(0, 4) + '...' + userId.slice(-4);
+}
+
 export class NotificationService {
   private twilioClient: ReturnType<typeof twilio> | null = null;
 
@@ -14,7 +24,7 @@ export class NotificationService {
 
   async sendOTP(telefono: string, codigo: string): Promise<void> {
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
-      logger.info({ telefono, codigo }, 'OTP generado (modo desarrollo/test)');
+      logger.info({ telefono: maskTelefono(telefono), codigo }, 'OTP generado (modo desarrollo/test)');
       return;
     }
     try {
@@ -33,7 +43,7 @@ export class NotificationService {
   async notifyNuevaOferta(telefonoSolicitante: string, tituloMandado: string): Promise<void> {
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
       logger.info(
-        { telefonoSolicitante, tituloMandado },
+        { telefonoSolicitante: maskTelefono(telefonoSolicitante), tituloMandado },
         'Notificación de nueva oferta (modo dev/test)',
       );
       return;
@@ -52,7 +62,7 @@ export class NotificationService {
   async notifyOfertaAceptada(telefonoMandadero: string, tituloMandado: string): Promise<void> {
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
       logger.info(
-        { telefonoMandadero, tituloMandado },
+        { telefonoMandadero: maskTelefono(telefonoMandadero), tituloMandado },
         'Notificación de oferta aceptada (modo dev/test)',
       );
       return;
@@ -85,7 +95,7 @@ export class NotificationService {
 
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
       logger.info(
-        { telefono: usuario.telefono, userId, estado, mensajeAdicional },
+        { telefono: maskTelefono(usuario.telefono), userId: maskUserId(userId), estado, mensajeAdicional },
         'Notificación de verificación (modo dev/test)',
       );
       return;

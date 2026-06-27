@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import * as Sentry from '@sentry/node';
+import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { authRoutes } from './routes/auth.routes';
 import { mandadoRoutes } from './routes/mandado.routes';
@@ -20,8 +21,8 @@ export function createApp() {
   app.use(express.json());
 
   const limiter = rateLimit({
-    windowMs: parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || (15 * 60 * 1000).toString(), 10),
-    max: parseInt(process.env.API_RATE_LIMIT_MAX || '100', 10),
+    windowMs: env.API_RATE_LIMIT_WINDOW_MS,
+    max: env.API_RATE_LIMIT_MAX,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Demasiadas solicitudes, intenta de nuevo más tarde' },
@@ -29,8 +30,8 @@ export function createApp() {
   app.use('/api/', limiter);
 
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '5', 10),
+    windowMs: env.API_RATE_LIMIT_WINDOW_MS,
+    max: env.AUTH_RATE_LIMIT_MAX,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Demasiados intentos de registro, intenta de nuevo más tarde' },

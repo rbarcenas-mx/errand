@@ -102,6 +102,12 @@
 - [ ] T046 Implement push notification service for: nueva oferta, oferta aceptada, mensaje nuevo, mandado completado
 - [ ] T047 Implement in-app polling as fallback when FCM is unavailable
 
+## Phase 10: Unit Test Gaps (pr-review findings)
+- [x] T053 Agregar tests unitarios para DenunciaRepository: create, findPendientes, updateEstado, findById (incluyendo casos de error Prisma)
+- [x] T054 Agregar tests unitarios para acceptOferta en mandado.service.ts: oferta no encontrada, no pertenece al mandado, oferta ya respondida, y creacion del mensaje de sistema
+- [x] T055 Agregar tests unitarios para la rama mock de uploadImage en storage.service.ts
+- [x] T056 Agregar aserciones explícitas para tx.oferta.findUnique y tx.mensaje.create en offer_flow.test.ts
+
 ## Dependencies
 - Phase 2 must be completed before Phase 3, 4, or 5.
 - Phase 3 (Mandados) is a prerequisite for Phase 4 (Ofertas).
