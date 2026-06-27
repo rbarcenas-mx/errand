@@ -22,3 +22,6 @@ audit/
 
 # QA backups
 qa/backup/
+
+# CI task plans (traza local, no se sube a GitHub)
+ci/
