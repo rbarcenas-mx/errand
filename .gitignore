@@ -25,3 +25,12 @@ qa/backup/
 
 # CI task plans (traza local, no se sube a GitHub)
 ci/
+
+# OpenCode config local
+.opencode/
+
+# QA artifacts
+qa/*
+
+# Windows zone identifier artifacts
+*.Zone.Identifier
