@@ -17,6 +17,12 @@ jest.mock('../../src/config/database', () => ({
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    favorito: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
     $transaction: jest.fn(),
   },
 }));
@@ -30,14 +36,34 @@ jest.mock('../../src/services/notification.service', () => ({
   },
 }));
 
-function mockTransaction(overrides: {
-  oferta?: Partial<{ id: string; id_mandado: string; estado: string; id_mandadero: string; mandado: { id_solicitante: string } }>;
-  ofertaUpdate?: { id: string; estado: string };
-} = {}): { tx: Record<string, Record<string, jest.Mock>>; lastTx: Record<string, Record<string, jest.Mock>> } {
-  const ofertaDefaults = { id: 'oferta-1', id_mandado: 'mandado-1', estado: 'pendiente', id_mandadero: 'user-mandadero', mandado: { id_solicitante: 'user-solicitante' } };
+function mockTransaction(
+  overrides: {
+    oferta?: Partial<{
+      id: string;
+      id_mandado: string;
+      estado: string;
+      id_mandadero: string;
+      mandado: { id_solicitante: string };
+    }>;
+    ofertaUpdate?: { id: string; estado: string };
+  } = {},
+): {
+  tx: Record<string, Record<string, jest.Mock>>;
+  lastTx: Record<string, Record<string, jest.Mock>>;
+} {
+  const ofertaDefaults = {
+    id: 'oferta-1',
+    id_mandado: 'mandado-1',
+    estado: 'pendiente',
+    id_mandadero: 'user-mandadero',
+    mandado: { id_solicitante: 'user-solicitante' },
+  };
   const ofertaData = { ...ofertaDefaults, ...overrides.oferta };
   const ofertaUpdateData = overrides.ofertaUpdate ?? { id: 'oferta-1', estado: 'aceptada' };
-  const lastTx: Record<string, Record<string, jest.Mock>> = {} as Record<string, Record<string, jest.Mock>>;
+  const lastTx: Record<string, Record<string, jest.Mock>> = {} as Record<
+    string,
+    Record<string, jest.Mock>
+  >;
   const tx = {
     oferta: {
       findUnique: jest.fn().mockResolvedValue(ofertaData),
@@ -141,6 +167,7 @@ describe('Offer Flow API', () => {
         id: 'mandado-1',
         id_solicitante: 'user-solicitante',
       });
+      prisma.favorito.findMany.mockResolvedValue([]);
       prisma.oferta.findMany.mockResolvedValue([
         {
           id: 'oferta-1',

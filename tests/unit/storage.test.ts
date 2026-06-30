@@ -25,6 +25,4 @@ describe('StorageService — mock branch', () => {
 
     expect(url).toMatch(/^https:\/\/res\.cloudinary\.com\/mock\/upload\/v1\/ine\/mock_\d+\.jpg$/);
   });
-
-
 });

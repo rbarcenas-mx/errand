@@ -11,7 +11,9 @@ jest.mock('../../src/config/database', () => ({
   },
 }));
 
-const { prisma } = require('../../src/config/database') as { prisma: { denuncia: Record<string, jest.Mock> } };
+const { prisma } = require('../../src/config/database') as {
+  prisma: { denuncia: Record<string, jest.Mock> };
+};
 
 const repo = new DenunciaRepository();
 
@@ -42,7 +44,9 @@ describe('DenunciaRepository', () => {
     it('should reject self-denuncia (id_denunciante === id_denunciado)', async () => {
       prisma.denuncia.create.mockRejectedValue(new Error('No puedes denunciarte a ti mismo'));
 
-      await expect(repo.create({ ...data, id_denunciado: 'user-1' })).rejects.toThrow('No puedes denunciarte a ti mismo');
+      await expect(repo.create({ ...data, id_denunciado: 'user-1' })).rejects.toThrow(
+        'No puedes denunciarte a ti mismo',
+      );
     });
 
     it('should throw on Prisma error', async () => {
@@ -55,8 +59,20 @@ describe('DenunciaRepository', () => {
   describe('findPendientes', () => {
     it('should return pending denuncias ordered by creation date', async () => {
       const mockDenuncias = [
-        { id: 'd1', estado: 'pendiente', denunciante: { id: 'u1', nombre_completo: 'A', telefono: '+52' }, denunciado: { id: 'u2', nombre_completo: 'B', telefono: '+52' }, mandado: { id: 'm1', titulo: 'Test' } },
-        { id: 'd2', estado: 'pendiente', denunciante: { id: 'u3', nombre_completo: 'C', telefono: '+52' }, denunciado: { id: 'u4', nombre_completo: 'D', telefono: '+52' }, mandado: { id: 'm2', titulo: 'Test 2' } },
+        {
+          id: 'd1',
+          estado: 'pendiente',
+          denunciante: { id: 'u1', nombre_completo: 'A', telefono: '+52' },
+          denunciado: { id: 'u2', nombre_completo: 'B', telefono: '+52' },
+          mandado: { id: 'm1', titulo: 'Test' },
+        },
+        {
+          id: 'd2',
+          estado: 'pendiente',
+          denunciante: { id: 'u3', nombre_completo: 'C', telefono: '+52' },
+          denunciado: { id: 'u4', nombre_completo: 'D', telefono: '+52' },
+          mandado: { id: 'm2', titulo: 'Test 2' },
+        },
       ];
       prisma.denuncia.findMany.mockResolvedValue(mockDenuncias);
 
@@ -87,7 +103,11 @@ describe('DenunciaRepository', () => {
 
   describe('updateEstado', () => {
     it('should update estado and resolucion', async () => {
-      prisma.denuncia.update.mockResolvedValue({ id: 'd1', estado: 'resuelta', resolucion: 'rechazar_usuario' });
+      prisma.denuncia.update.mockResolvedValue({
+        id: 'd1',
+        estado: 'resuelta',
+        resolucion: 'rechazar_usuario',
+      });
 
       const result = await repo.updateEstado('d1', 'resuelta', 'rechazar_usuario');
 
@@ -112,7 +132,9 @@ describe('DenunciaRepository', () => {
     it('should throw when denuncia not found', async () => {
       prisma.denuncia.update.mockRejectedValue(new Error('Denuncia no encontrada'));
 
-      await expect(repo.updateEstado('nonexistent', 'resuelta')).rejects.toThrow('Denuncia no encontrada');
+      await expect(repo.updateEstado('nonexistent', 'resuelta')).rejects.toThrow(
+        'Denuncia no encontrada',
+      );
     });
   });
 
