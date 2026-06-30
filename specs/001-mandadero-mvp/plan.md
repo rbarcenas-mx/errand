@@ -1,12 +1,12 @@
 # Plan de Implementación — Mandadero MVP
 
-**Versión**: 1.0.0
-**Fecha**: 2026-06-16
+**Versión**: 1.1.0
+**Fecha**: 2026-06-29
 **Feature**: `specs/001-mandadero-mvp`
 
 ## Contexto Técnico
 
-- **Frontend**: React Native (expo-managed recomendado para MVP)
+- **Frontend**: React Native (Expo managed) + React Navigation + Context API + fetch + StyleSheet
 - **Backend**: Node.js + Express
 - **Base de datos**: PostgreSQL + PostGIS
 - **Geocodificación**: Nominatim (OpenStreetMap) para normalización de direcciones y búsqueda inversa. Implementar caché de resultados en memoria para evitar solicitudes repetidas y respetar el límite de 1 solicitud/segundo. User-Agent configurado por política de uso. Precisión suficiente para zona metropolitana de Querétaro en MVP. Post-MVP: migrar a Google Places API para autocompletado y mayor precisión.
@@ -16,6 +16,7 @@
 - **Verificación identidad**: OCR + selfie (servicio cloud)
 - **CI/CD**: GitHub Actions
 - **Despliegue**: Railway.app o Fly.io
+- **Seguridad (MVP)**: JWT con refresh tokens, OTP, rate limiting. Los números de teléfono se almacenan sin cifrado en BD — riesgo aceptado para MVP dado que el acceso a BD está limitado al backend. Post-MVP: cifrado a nivel de columna con pgcrypto si se requiere.
 
 ## Verificación de Constitución
 
@@ -23,7 +24,7 @@
 |---|---|
 | Calidad de Código y Limpieza | ESLint + Prettier + TypeScript en setup de proyecto |
 | Seguridad Primero | JWT con refresh tokens, validación de inputs, OTP en registro, manejo de datos sensibles |
-| Pruebas Rigurosas | Suites por endpoint (contract tests + integration tests) + pipeline QA automatizado (`qa.prepare` + `qa.execute`) que genera y ejecuta planes de infraestructura y flujo multi-usuario con datos realistas |
+| Pruebas Rigurosas | Suites de integración por endpoint + pipeline QA automatizado (`qa.prepare` + `qa.execute`) que genera y ejecuta planes de infraestructura y flujo multi-usuario. Contract tests diferidos a post-MVP. |
 | UX Consistente | Diseño de API coherente, respuestas unificadas, validaciones claras |
 | Rendimiento y Escalabilidad | PostgreSQL con índices geoespaciales, paginación en listados |
 
@@ -55,7 +56,7 @@
 #### Sprint 2 — Mandados y Ofertas
 1. CRUD de mandados con búsqueda geoespacial
    - En listado: exponer solo `distancia_km` (calculada desde ubicación del usuario) y colonia/sector como dirección general
-   - En detalle (`GET /:id`): exponer coordenadas exactas solo para usuarios con `estado_verificacion = aprobado` o `pendiente_manual`
+    - En detalle (`GET /:id`): exponer coordenadas exactas solo para el solicitante y el mandadero con oferta aceptada. Los demás ven solo colonia/sector con coordenadas aproximadas.
 2. Envío y gestión de ofertas
 3. Flujo de aceptación/rechazo de ofertas (solicitar confirmación explícita de consentimiento del solicitante antes de revelar contacto de ambas partes, implementado con transacción ACID en `mandado.service.ts`)
 4. Cambio de estados de mandado (incluyendo cancelación por Solicitante y expiración automática)
@@ -96,11 +97,33 @@
 4. Crear ruta `POST /api/v1/admin/denuncias/:id/resolver` para sancionar o desestimar
 5. Pruebas de integración para el flujo de denuncias
 
+#### Sprint 5c — Backend touch-ups para frontend
+1. Agregar endpoint `GET /api/v1/mis-mandados` — lista mandados activos del solicitante autenticado (`findActiveBySolicitante` ya existe en repositorio)
+2. Agregar endpoint `GET /api/v1/mis-ofertas` — lista ofertas pendientes + aceptadas del mandadero autenticado
+3. Agregar modelo `Favorito` (id_solicitante, id_mandadero, unique compuesto) y endpoints `POST /api/v1/favoritos` + `DELETE /api/v1/favoritos/:id_mandadero`
+4. En `GET /api/v1/mandados/:id/ofertas` incluir campo `es_favorito` indicando si el solicitante marcó a ese mandadero como favorito
+
 #### Sprint 6 — Notificaciones Push (Post-MVP)
 1. Integrar Firebase Cloud Messaging (FCM) en el backend
 2. Crear endpoint para registro de tokens de dispositivo (`POST /api/v1/notificaciones/registrar-token`)
 3. Implementar servicio de notificaciones push para nuevos eventos: oferta recibida, oferta aceptada, mensaje nuevo, mandado completado
 4. Notificaciones in-app (polling) como fallback cuando FCM no está disponible
+
+#### Sprint 7 — Frontend Mobile (Expo)
+1. Inicializar proyecto Expo + React Navigation con stacks Auth y Main
+2. Crear `AuthContext` para manejo de token + refresh + logout
+3. Crear `api.ts` con fetch wrapper (base URL, auth header, manejo de errores)
+4. **Pantalla Register** — formulario nombre/teléfono/correo → `POST /auth/register`
+5. **Pantalla VerifyOtp** — input código OTP, reenvío → `POST /auth/verify-otp`, `POST /auth/resend-otp`
+6. **Pantalla VerifyIdentity** — cámara/subir INE + selfie → `POST /auth/verify-identity`
+7. **Pantalla Home** — listado de mandados cercanos (solicita ubicación) → `GET /mandados?lat&lng`
+8. **Pantalla CreateMandado** — formulario con tipo, direcciones recogida/entrega, descripción, foto, fecha límite → `POST /mandados`
+9. **Pantalla MandadoDetail** — info completa del mandado, listado de ofertas, enviar oferta (mandadero), aceptar/rechazar (solicitante) con indicador de favorito → `GET /mandados/:id`, `POST /mandados/:id/ofertas`, `GET /mandados/:id/ofertas`, `PATCH /ofertas/:id`
+10. **Pantalla MisMandados** — lista de mandados activos del solicitante → `GET /mis-mandados`
+11. **Pantalla MisOfertas** — lista de ofertas pendientes (esperando respuesta) + activas (aceptadas, en progreso) del mandadero → `GET /mis-ofertas`
+12. **Pantalla Chat** — canal de mensajería del mandado activo con polling → `GET|POST /mandados/:id/mensajes`
+13. **Pantalla Rate** — calificación 1-5 a contraparte post-mandado → `POST /calificaciones`
+14. **Pantalla Profile** — estado de verificación, eliminar cuenta, toggle a solicitante/mandadero → `GET /auth/verification-status`, `DELETE /auth/cuenta`
 
 ### Fase 3: Despliegue
 1. Configurar ambiente de producción en Railway.app
@@ -108,6 +131,20 @@
 3. Migraciones automáticas en deploy
 4. Monitoreo con Sentry
 5. Pruebas de hum hum en producción
+
+## Decisiones Aceptadas y Deuda Técnica
+
+Hallazgos recurrentes de auditoría que son intencionales para el MVP:
+
+| Hallazgo | Tipo | Decisión |
+|----------|------|----------|
+| FR-005: consentimiento explícito para revelar contacto | Decisión | Aceptar oferta = consentimiento implícito. Sin paso extra en MVP. |
+| FR-007: notificar admin en pendiente_manual | Deuda | Sin notificación automática en MVP (admin revisa manualmente vía endpoint). |
+| Contestabilidad de ofertas (PATCH acepta accion/estado) | Decisión | Ambos campos aceptados por flexibilidad; prioridad a `accion`. |
+| Teléfonos en texto plano en BD | Decisión | Riesgo aceptado para MVP. Post-MVP: cifrado columna con pgcrypto. |
+| Contract tests | Deuda | Diferido a post-MVP. Solo integration tests en MVP. |
+| OCR stub | Deuda | Placeholder para MVP. Integrar OCR real antes de producción. |
+| Seed incompleto (sin admin, sin favoritos, sin denuncias) | Deuda | Aceptado para MVP. Expandir si QA lo requiere. |
 
 ## Artefactos Generados
 
@@ -118,4 +155,5 @@
 | Contratos API | `specs/001-mandadero-mvp/contracts/api.md` |
 | Guía de validación | `specs/001-mandadero-mvp/quickstart.md` |
 | Plan de implementación | `specs/001-mandadero-mvp/plan.md` |
+| Tareas | `specs/001-mandadero-mvp/tasks.md` |
 | Modelo de datos | `specs/001-mandadero-mvp/data-model.md` |

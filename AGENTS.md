@@ -8,6 +8,33 @@ specs/001-mandadero-mvp/plan.md
 
 App que conecta personas que necesitan mandados con otras dispuestas a realizarlos en Querétaro y área metropolitana.
 
+## Ponytail — Codigo minimalista
+
+El proyecto usa [ponytail](https://github.com/DietrichGebert/ponytail) como plugin de OpenCode para que el agente escriba solo el codigo necesario (escalera YAGNI). Inyecta reglas de comportamiento en cada turno. Activo por defecto en modo `full`.
+
+- Cambiar intensidad: `/ponytail lite`, `/ponytail full`, `/ponytail ultra`, `/ponytail off`
+- Revisar diff por sobre-ingenieria: `/ponytail-review`
+- Deuda tecnica pendiente: `/ponytail-debt`
+- Config: `~/.config/opencode/opencode.json` → `"plugin": ["@dietrichgebert/ponytail"]`
+
+## Headroom — Compresion de contexto
+
+El proyecto usa [headroom](https://github.com/headroomlabs-ai/headroom) como proxy local para comprimir contexto antes de enviarlo al LLM. Corre como servicio systemd en `localhost:8787`. `resolve_model()` enruta automaticamente el trafico remoto (ahorro_balanceado, ahorro_bajo) por el proxy. El trafico local (ahorro_alto / Ollama) no se enruta.
+
+- Ver estado: `source ~/.config/opencode/headroom.sh status`
+- Ver ahorro: `source ~/.config/opencode/headroom.sh savings`
+- Doc completa: `~/.rbarcenas/headroom-setup.md`
+
+### Session Log
+
+Cuando el usuario pida "actualiza el log de sesion" o "registra el ahorro de tokens", ejecutar:
+
+```bash
+cd /home/rbarcenas/development/errand && bash .opencode/session-log.sh "resumen de lo hecho en la sesion"
+```
+
+El parametro AHORRO_MODO se toma del entorno. Si no esta definido, usar `grep AHORRO_MODO ~/.bashrc` para detectar el default.
+
 ## Proyecto
 
 - Package manager: npm

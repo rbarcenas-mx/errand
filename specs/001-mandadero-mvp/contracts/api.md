@@ -276,9 +276,9 @@ Crear nuevo mandado (solicitante autenticado).
 ---
 
 ### GET /api/v1/mandados/:id
-Obtener detalle completo de un mandado. Los campos de dirección exacta solo se incluyen si el usuario solicitante tiene estado de verificación `aprobado`. De lo contrario, solo se devuelve `colonia`.
+Obtener detalle completo de un mandado. Los campos de dirección exacta solo se incluyen si el usuario autenticado es el solicitante (creador del mandado) o el mandadero con oferta aceptada en ese mandado. De lo contrario, se devuelve `ubicacion_zona` con colonia/sector y coordenadas aproximadas.
 
-**Response 200**:
+**Response 200 (usuario autorizado)**:
 ```json
 {
   "id": "uuid",
@@ -300,7 +300,88 @@ Obtener detalle completo de un mandado. Los campos de dirección exacta solo se 
 }
 ```
 
+**Response 200 (usuario no autorizado / no autenticado)**:
+```json
+{
+  "id": "uuid",
+  "solicitante": {
+    "id": "uuid",
+    "nombre_completo": "Juan Pérez",
+    "puntuacion_promedio": 4.5
+  },
+  "titulo": "Comprar tortillas...",
+  "descripcion": "Necesito 1kg de tortillas...",
+  "tipo": "compra",
+  "foto_url": "https://cloudinary.com/...",
+  "ubicacion_zona": { "colonia": "Centro", "coordenadas_aproximadas": { "lat": 20.588, "lng": -100.389 } },
+  "fecha_hora_limite": "2026-06-20T18:00:00Z",
+  "estado": "publicado",
+  "total_ofertas": 3,
+  "creado_en": "2026-06-16T12:00:00Z"
+}
+```
+
 **Errores**: 404 (no encontrado)
+
+---
+
+### GET /api/v1/mandados/mis-mandados
+Listar mandados activos del solicitante autenticado.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response 200**:
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "titulo": "Comprar tortillas",
+      "tipo": "compra",
+      "estado": "publicado",
+      "fecha_hora_limite": "2026-06-20T18:00:00Z",
+      "creado_en": "2026-06-16T12:00:00Z"
+    }
+  ]
+}
+```
+
+**Errores**: 401 (no autenticado)
+
+---
+
+### GET /api/v1/ofertas/mis-ofertas
+Listar ofertas del mandadero autenticado (pendientes + aceptadas).
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response 200**:
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "mandado": {
+        "id": "uuid",
+        "titulo": "Comprar tortillas",
+        "tipo": "compra",
+        "estado": "publicado",
+        "fecha_hora_limite": "2026-06-20T18:00:00Z"
+      },
+      "solicitante": {
+        "id": "uuid",
+        "nombre_completo": "Juan Pérez",
+        "puntuacion_promedio": 4.5
+      },
+      "monto_ofertado": 50.00,
+      "estado": "pendiente",
+      "creado_en": "2026-06-16T12:30:00Z"
+    }
+  ]
+}
+```
+
+**Errores**: 401 (no autenticado)
 
 ---
 
@@ -637,6 +718,49 @@ Valores de `motivo`: `acoso`, `fraude`, `otro`
 ```
 
 **Errores**: 400 (auto-denuncia), 401 (no autenticado), 404 (usuario o mandado no encontrado), 422 (datos inválidos)
+
+---
+
+## Favoritos
+
+### POST /api/v1/favoritos
+Marcar un mandadero como favorito (solicitante autenticado).
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request**:
+```json
+{
+  "id_mandadero": "uuid"
+}
+```
+
+**Response 201**:
+```json
+{
+  "id": "uuid",
+  "id_mandadero": "uuid",
+  "creado_en": "2026-06-29T12:00:00Z"
+}
+```
+
+**Errores**: 400 (auto-favorito), 401 (no autenticado), 409 (ya es favorito), 422 (datos inválidos)
+
+---
+
+### DELETE /api/v1/favoritos/:id_mandadero
+Eliminar un mandadero de favoritos.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response 200**:
+```json
+{
+  "mensaje": "Favorito eliminado"
+}
+```
+
+**Errores**: 401 (no autenticado), 404 (favorito no encontrado)
 
 ---
 

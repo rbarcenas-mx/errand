@@ -104,6 +104,7 @@ Una vez que el Solicitante acepta una oferta, se abre un canal de mensajería in
 - **Formato inválido**: Si el usuario ingresa ubicaciones, precios o descripciones con formato inválido, el sistema DEBE devolver un error de validación descriptivo sin crear el recurso.
 - **Confirmación de ubicación**: Al crear un mandado, el sistema DEBE devolver la dirección normalizada por el motor de geocodificación y solicitar confirmación del usuario antes de publicar el mandado.
 - **Reporte de incidente post-transacción**: Si un usuario experimenta acoso, fraude o cualquier incidente tras la revelación de contacto, puede reportarlo mediante el endpoint `POST /api/v1/denuncias`. El administrador revisa las denuncias desde `GET /api/v1/admin/denuncias-pendientes` y puede sancionar al infractor cambiando su `estado_verificacion` a `rechazado` mediante `POST /api/v1/admin/denuncias/:id/resolver`.
+- **Favoritos**: Un solicitante puede marcar a un mandadero como favorito para identificarlo rápidamente en futuras ofertas. El listado de ofertas de un mandado (`GET /api/v1/mandados/:id/ofertas`) incluye `es_favorito` para indicar si el solicitante ya marcó a ese mandadero. Es una marca local del solicitante —no notifica al mandadero— y no afecta el flujo de ofertas.
 - **SLA de verificación manual**: El SLA de 12 horas hábiles para revisión manual de documentos es adecuado para un MVP donde el rol de administrador recae en el mismo equipo de desarrollo. En producción se recomienda reducir este SLA y/o automatizar el proceso.
 
 ### Manejo de Datos Sensibles
@@ -127,7 +128,7 @@ Define qué acciones puede realizar un usuario según su `estado_verificacion`:
 | Ver información de contacto de la contraparte (teléfono) | ❌ | ❌ | ✅ | ❌ |
 | Calificar a la contraparte tras completar mandado | ❌ | ❌ | ✅ | ❌ |
 
-**Datos sensibles definidos**: se considera "dato sensible" el número de teléfono de cualquier usuario y las ubicaciones exactas de recogida/entrega. La dirección exacta solo es visible para usuarios verificados (estado `aprobado` o `pendiente_manual`). Los usuarios con estado `pendiente` o `rechazado` solo ven la colonia o sector general. El número de teléfono de la contraparte se revela a ambas partes al aceptar una oferta.
+**Datos sensibles definidos**: se considera "dato sensible" el número de teléfono de cualquier usuario y las ubicaciones exactas de recogida/entrega. La dirección exacta solo es visible para el solicitante (creador del mandado) y el mandadero con oferta aceptada en ese mandado. Todos los demás usuarios solo ven la colonia o sector general con coordenadas aproximadas. El número de teléfono de la contraparte se revela a ambas partes al aceptar una oferta.
 
 **Justificación — Publicación de mandados para `pendiente_manual`**: Un usuario con estado `pendiente_manual` ya ha subido sus documentos de identidad (INE + selfie) y está en espera de revisión manual. Se le permite publicar mandados como solicitante porque:
 1. Ya completó el paso más crítico de verificación (carga de documentos reales).
@@ -150,6 +151,7 @@ Define qué acciones puede realizar un usuario según su `estado_verificacion`:
 - **FR-007**: El sistema DEBE permitir a los usuarios subir una foto de su INE y una selfie (foto en vivo) para iniciar el proceso de verificación de identidad. El sistema procesará los documentos de forma asíncrona (vía OCR/servicio externo) y notificará al usuario el resultado (`aprobado` o `rechazado`). Un usuario con verificación rechazada puede reintentar la verificación subiendo nuevos documentos. Si el servicio de OCR falla o no está disponible, el sistema DEBE asignar el estado `pendiente_manual` y notificar a un administrador para que revise y apruebe/rechace manualmente los documentos.
 - **FR-008**: El sistema DEBE habilitar un canal de mensajería interna entre Solicitante y Mandadero una vez que una oferta es aceptada. El canal DEBE permitir el envío y recepción de mensajes de texto, y DEBE cerrarse a nuevos mensajes cuando el mandado se completa (solo lectura).
 - **FR-009**: El sistema DEBE permitir a los usuarios reportar incidentes (acoso, fraude) post-transacción mediante un endpoint de denuncias. El administrador DEBE poder listar las denuncias pendientes y sancionar al usuario infractor cambiando su `estado_verificacion` a `rechazado`. Los endpoints del panel de administración (`/admin/`) DEBEN estar protegidos con autenticación JWT (`authenticate`) y verificación de rol administrador (`requireAdmin`), identificado por el número telefónico configurado en `ADMIN_TELEFONO`.
+- **FR-010**: El sistema DEBE permitir al solicitante marcar/desmarcar mandaderos como favoritos. Esta marca es local del solicitante, no notifica al mandadero. El listado de ofertas de un mandado (`GET /api/v1/mandados/:id/ofertas`) DEBE incluir `es_favorito` para cada oferta indicando si el mandadero está marcado como favorito. El solicitante puede gestionar favoritos mediante `POST /api/v1/favoritos` (crear) y `DELETE /api/v1/favoritos/:id_mandadero` (eliminar).
 
 ### Entidades Clave
 
@@ -159,6 +161,7 @@ Define qué acciones puede realizar un usuario según su `estado_verificacion`:
 - **Oferta**: El puente entre un Mandado y un Mandadero; contiene el precio propuesto y el estado.
 - **Mensaje**: Representa un mensaje individual dentro de un canal entre Solicitante y Mandadero para un mandado aceptado. Contiene el texto, remitente, fecha de envío y estado de lectura.
 - **Denuncia**: Reporte de incidente post-transacción entre usuarios. Contiene el denunciante, denunciado, mandado asociado, motivo y estado.
+- **Favorito**: Marca local del solicitante hacia un mandadero. Contiene solo el par `(id_solicitante, id_mandadero)` con timestamp. No tiene efectos en el flujo de negocio más allá de la UI.
 
 ## Criterios de Éxito *(obligatorio)*
 
