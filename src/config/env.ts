@@ -27,7 +27,10 @@ export const env = {
   ALLOW_TEST_OTP: process.env.ALLOW_TEST_OTP === 'true',
   VERIFICACION_MANUAL: process.env.VERIFICACION_MANUAL === 'true',
   ADMIN_TELEFONO: process.env.ADMIN_TELEFONO || '',
-  API_RATE_LIMIT_WINDOW_MS: parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || (15 * 60 * 1000).toString(), 10),
+  API_RATE_LIMIT_WINDOW_MS: parseInt(
+    process.env.API_RATE_LIMIT_WINDOW_MS || (15 * 60 * 1000).toString(),
+    10,
+  ),
   API_RATE_LIMIT_MAX: parseInt(process.env.API_RATE_LIMIT_MAX || '100', 10),
   AUTH_RATE_LIMIT_MAX: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '5', 10),
   SENTRY_DSN: process.env.SENTRY_DSN || '',

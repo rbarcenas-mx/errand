@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { mandadoRepository } from '../repositories/mandado.repository';
 import { ofertaRepository } from '../repositories/oferta.repository';
+import { favoritoRepository } from '../repositories/favorito.repository';
 import { mandadoService } from '../services/mandado.service';
 import { notificationService } from '../services/notification.service';
 import { verificationService } from '../services/verification.service';
@@ -111,7 +112,10 @@ export class OfertaController {
         return;
       }
 
-      const ofertas = await ofertaRepository.listByMandadoWithMandadero(mandadoId);
+      const [ofertas, favoritos] = await Promise.all([
+        ofertaRepository.listByMandadoWithMandadero(mandadoId),
+        favoritoRepository.mandaderoIdsBySolicitante(req.usuario.sub),
+      ]);
 
       res.status(200).json({
         data: ofertas.map((o) => ({
@@ -119,6 +123,7 @@ export class OfertaController {
           mandadero: o.mandadero,
           monto_ofertado: Number(o.monto_ofertado),
           estado: o.estado,
+          es_favorito: favoritos.has(o.mandadero.id),
           creado_en: o.creado_en,
         })),
       });
@@ -168,7 +173,7 @@ export class OfertaController {
         return;
       }
 
-      const { contacto_mandadero, contacto_solicitante } = await mandadoService.acceptOferta(
+      const { contacto_mandadero } = await mandadoService.acceptOferta(
         ofertaId,
         oferta.id_mandado,
         req.usuario.sub,
@@ -184,9 +189,8 @@ export class OfertaController {
       }
 
       res.status(200).json({
-        mensaje: 'Oferta aceptada. Canal de mensajería abierto.',
+        mensaje: 'Oferta aceptada. Contacto del mandadero revelado.',
         contacto_mandadero,
-        contacto_solicitante,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -194,6 +198,37 @@ export class OfertaController {
         return;
       }
       next(error);
+    }
+  }
+
+  async listByMandadero(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.usuario) {
+        res.status(401).json({ error: 'Autenticación requerida' });
+        return;
+      }
+
+      const ofertas = await ofertaRepository.listByMandadero(req.usuario.sub);
+
+      res.status(200).json({
+        data: ofertas.map((o) => ({
+          id: o.id,
+          mandado: {
+            id: o.mandado.id,
+            titulo: o.mandado.titulo,
+            tipo: o.mandado.tipo,
+            estado: o.mandado.estado,
+            fecha_hora_limite: o.mandado.fecha_hora_limite,
+          },
+          solicitante: o.mandado.solicitante,
+          monto_ofertado: Number(o.monto_ofertado),
+          estado: o.estado,
+          creado_en: o.creado_en,
+        })),
+      });
+    } catch (error) {
+      logger.error({ error }, 'Error al listar ofertas del mandadero');
+      res.status(500).json({ error: 'Error interno del servidor' });
     }
   }
 }

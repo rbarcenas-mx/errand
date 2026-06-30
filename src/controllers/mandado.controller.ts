@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { mandadoRepository } from '../repositories/mandado.repository';
+import { ofertaRepository } from '../repositories/oferta.repository';
 import { logger } from '../utils/logger';
 
 const createMandadoSchema = z.object({
@@ -126,34 +127,72 @@ export class MandadoController {
         return;
       }
 
-      res.status(200).json({
-        id: mandado.id,
-        solicitante: mandado.solicitante
-          ? {
-              id: mandado.solicitante.id,
-              nombre_completo: mandado.solicitante.nombre_completo,
-              puntuacion_promedio: mandado.solicitante.puntuacion_promedio,
-            }
-          : null,
-        titulo: mandado.titulo,
-        descripcion: mandado.descripcion,
-        tipo: mandado.tipo,
-        foto_url: mandado.foto_url,
-        ubicacion_recogida: {
-          lat: mandado.ubicacion_recogida_lat,
-          lng: mandado.ubicacion_recogida_lng,
-          direccion: mandado.direccion_recogida,
-        },
-        ubicacion_entrega: {
-          lat: mandado.ubicacion_entrega_lat,
-          lng: mandado.ubicacion_entrega_lng,
-          direccion: mandado.direccion_entrega,
-        },
-        fecha_hora_limite: mandado.fecha_hora_limite,
-        estado: mandado.estado,
-        total_ofertas: mandado.ofertas.length,
-        creado_en: mandado.creado_en,
-      });
+      const userId = req.usuario?.sub;
+      const esSolicitante = userId && mandado.id_solicitante === userId;
+
+      let esMandaderoAceptado = false;
+      if (userId && !esSolicitante) {
+        const oferta = await ofertaRepository.findByMandadoAndMandadero(req.params.id, userId);
+        esMandaderoAceptado = oferta?.estado === 'aceptada';
+      }
+
+      if (esSolicitante || esMandaderoAceptado) {
+        res.status(200).json({
+          id: mandado.id,
+          solicitante: mandado.solicitante
+            ? {
+                id: mandado.solicitante.id,
+                nombre_completo: mandado.solicitante.nombre_completo,
+                puntuacion_promedio: mandado.solicitante.puntuacion_promedio,
+              }
+            : null,
+          titulo: mandado.titulo,
+          descripcion: mandado.descripcion,
+          tipo: mandado.tipo,
+          foto_url: mandado.foto_url,
+          ubicacion_recogida: {
+            lat: mandado.ubicacion_recogida_lat,
+            lng: mandado.ubicacion_recogida_lng,
+            direccion: mandado.direccion_recogida,
+          },
+          ubicacion_entrega: {
+            lat: mandado.ubicacion_entrega_lat,
+            lng: mandado.ubicacion_entrega_lng,
+            direccion: mandado.direccion_entrega,
+          },
+          fecha_hora_limite: mandado.fecha_hora_limite,
+          estado: mandado.estado,
+          total_ofertas: mandado.ofertas.length,
+          creado_en: mandado.creado_en,
+        });
+      } else {
+        // ponytail: no colonia field in schema, return direccion_recogida text as zona info
+        res.status(200).json({
+          id: mandado.id,
+          solicitante: mandado.solicitante
+            ? {
+                id: mandado.solicitante.id,
+                nombre_completo: mandado.solicitante.nombre_completo,
+                puntuacion_promedio: mandado.solicitante.puntuacion_promedio,
+              }
+            : null,
+          titulo: mandado.titulo,
+          descripcion: mandado.descripcion,
+          tipo: mandado.tipo,
+          foto_url: mandado.foto_url,
+          ubicacion_zona: {
+            colonia: mandado.direccion_recogida,
+            coordenadas_aproximadas: {
+              lat: mandado.ubicacion_recogida_lat,
+              lng: mandado.ubicacion_recogida_lng,
+            },
+          },
+          fecha_hora_limite: mandado.fecha_hora_limite,
+          estado: mandado.estado,
+          total_ofertas: mandado.ofertas.length,
+          creado_en: mandado.creado_en,
+        });
+      }
     } catch (error) {
       logger.error({ error }, 'Error al obtener mandado');
       res.status(500).json({ error: 'Error interno del servidor' });
@@ -213,6 +252,31 @@ export class MandadoController {
         return;
       }
       logger.error({ error }, 'Error al actualizar estado de mandado');
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  }
+
+  async listBySolicitante(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.usuario) {
+        res.status(401).json({ error: 'Autenticación requerida' });
+        return;
+      }
+
+      const mandados = await mandadoRepository.findActiveBySolicitante(req.usuario.sub);
+
+      res.status(200).json({
+        data: mandados.map((m) => ({
+          id: m.id,
+          titulo: m.titulo,
+          tipo: m.tipo,
+          estado: m.estado,
+          fecha_hora_limite: m.fecha_hora_limite,
+          creado_en: m.creado_en,
+        })),
+      });
+    } catch (error) {
+      logger.error({ error }, 'Error al listar mandados del solicitante');
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   }

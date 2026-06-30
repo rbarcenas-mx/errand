@@ -34,6 +34,8 @@ model Usuario {
   mensajes_enviados        Mensaje[]
   denuncias_realizadas     Denuncia[]     @relation("Denunciante")
   denuncias_recibidas      Denuncia[]     @relation("Denunciado")
+  favoritos_dados          Favorito[]     @relation("FavoritoSolicitante")
+  favoritos_recibidos      Favorito[]     @relation("FavoritoMandadero")
 
   @@map("usuarios")
 }
@@ -132,6 +134,18 @@ model Mensaje {
 
   @@index([id_mandado, creado_en])
   @@map("mensajes")
+}
+
+model Favorito {
+  id             String   @id @default(uuid()) @db.Uuid
+  id_solicitante String   @db.Uuid
+  solicitante    Usuario  @relation("FavoritoSolicitante", fields: [id_solicitante], references: [id], onDelete: Cascade)
+  id_mandadero   String   @db.Uuid
+  mandadero      Usuario  @relation("FavoritoMandadero", fields: [id_mandadero], references: [id], onDelete: Cascade)
+  creado_en      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([id_solicitante, id_mandadero])
+  @@map("favoritos")
 }
 
 model Denuncia {

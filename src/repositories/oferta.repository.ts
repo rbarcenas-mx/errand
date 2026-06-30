@@ -57,6 +57,34 @@ export class OfertaRepository {
       orderBy: { creado_en: 'desc' },
     });
   }
+
+  async listByMandadero(idMandadero: string) {
+    return prisma.oferta.findMany({
+      where: {
+        id_mandadero: idMandadero,
+        estado: { in: ['pendiente', 'aceptada'] },
+      },
+      include: {
+        mandado: {
+          select: {
+            id: true,
+            titulo: true,
+            tipo: true,
+            estado: true,
+            fecha_hora_limite: true,
+            solicitante: {
+              select: {
+                id: true,
+                nombre_completo: true,
+                puntuacion_promedio: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { creado_en: 'desc' },
+    });
+  }
 }
 
 export const ofertaRepository = new OfertaRepository();

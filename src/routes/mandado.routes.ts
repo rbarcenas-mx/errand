@@ -6,9 +6,12 @@ import { listMensajes, createMensaje } from '../controllers/mensaje.controller';
 
 export const mandadoRoutes = Router();
 
+mandadoRoutes.get('/mis-mandados', authenticate, (req, res) =>
+  mandadoController.listBySolicitante(req, res),
+);
 mandadoRoutes.post('/', authenticate, (req, res) => mandadoController.create(req, res));
-mandadoRoutes.get('/', authenticate, (req, res) => mandadoController.list(req, res));
-mandadoRoutes.get('/:id', authenticate, (req, res) => mandadoController.getById(req, res));
+mandadoRoutes.get('/', (req, res) => mandadoController.list(req, res));
+mandadoRoutes.get('/:id', (req, res) => mandadoController.getById(req, res));
 mandadoRoutes.patch('/:id/estado', authenticate, (req, res) =>
   mandadoController.updateEstado(req, res),
 );

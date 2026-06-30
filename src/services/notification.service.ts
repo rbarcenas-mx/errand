@@ -24,7 +24,10 @@ export class NotificationService {
 
   async sendOTP(telefono: string, codigo: string): Promise<void> {
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
-      logger.info({ telefono: maskTelefono(telefono), codigo }, 'OTP generado (modo desarrollo/test)');
+      logger.info(
+        { telefono: maskTelefono(telefono), codigo },
+        'OTP generado (modo desarrollo/test)',
+      );
       return;
     }
     try {
@@ -95,7 +98,12 @@ export class NotificationService {
 
     if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
       logger.info(
-        { telefono: maskTelefono(usuario.telefono), userId: maskUserId(userId), estado, mensajeAdicional },
+        {
+          telefono: maskTelefono(usuario.telefono),
+          userId: maskUserId(userId),
+          estado,
+          mensajeAdicional,
+        },
         'Notificación de verificación (modo dev/test)',
       );
       return;
